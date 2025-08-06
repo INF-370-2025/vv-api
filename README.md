@@ -1,0 +1,28 @@
+This is a [FastAPI](https://github.com/fastapi/fastapi) python api.
+
+
+## 1 Set Up virtual environment
+
+*************************
+
+ - open terminal in (vault-vision-api) directory 
+ - create venv : python -m venv venv
+ - activate venv : venv\Scripts\activate.bat
+ - install reqs : pip install -r requirements.txt
+
+ *************************
+
+## 2 Running the API
+
+*************************
+
+- open terminal in (vault-vision-api) directory 
+
+- run this : venv\Scripts\activate.bat&&set FASTAPI_ENV=dev&&python -m uvicorn api.main:app --reload
+
+*************************
+
+## 3 API DOCS
+
+For swaggerUI, goto: http://127.0.0.1:8000/docs
+

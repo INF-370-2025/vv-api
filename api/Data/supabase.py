@@ -1,0 +1,1709 @@
+from supabase import create_client
+from ..config import settings
+from ..models.role_model import role, role_claim, role_claim_line
+from ..models.quotation_model import quotation
+from ..models.job_card_model import job_card
+from ..models.user_model import user
+from ..models.type_model import type
+from ..models.employee_model import employee
+from ..models.employee_pay_slip_model import employee_pay_slip
+from ..models.employee_warning_model import employee_warning
+from ..models.receipt_model import receipt 
+from ..models.customers_model import customer
+from ..models.job_request_model import job_request, job_request_insert
+from ..models.general_model import contact_us
+from ..models.invoice_model import invoice
+from ..models.stock_model import stock
+from ..models.pattern_model import pattern
+from ..models.delivery_note_model import delivery_note
+from ..models.employee_time_log_model import EmployeeTimeLog
+from datetime import datetime, timedelta
+
+print_logs = True
+
+# Connect To SB
+
+def get_supabase_client(is_admin:bool = False):
+    if is_admin:
+        return create_client(settings.SUPA_URL,settings.SUPA_SERVICE_KEY)
+    else:
+        return create_client(settings.SUPA_URL,settings.SUPA_ANON_KEY)
+    
+    
+# Error Logger
+
+def log_error(message:str = None):
+    if message is not None: 
+        try:
+            db = get_supabase_client(True)
+            response = db.schema(settings.SUPA_SCHEMA) \
+            .table("error_logs") \
+            .insert({ 
+                     "message": message
+                     
+                     
+                    }) \
+            .execute()          
+       
+            if print_logs is True:
+                print(message)
+     
+        except Exception as error:
+            print(error)
+            return error
+        
+auth_users = [
+    { "name":"Krishna","user_id":"d1952d0b-80d0-47f8-816f-dfce57e43d1f","phone": "27614639706"},
+    { "name":"Jess","user_id":"7e8b435e-18a9-4b25-b63a-a6cd824fbd8f","phone": "27605446259"},
+    { "name":"Joao","user_id":"de0575d4-8b2a-42cd-9708-0b4f01af958e","phone":"27713905806"},
+    { "name":"Jarred","user_id":"247da2f8-1dd9-4245-930a-d389b0aa1a8a","phone":"27832092706"},
+    { "name":"Ndumiso","user_id":"2f6c9f2d-7b1c-41d4-ae88-62fea7f47567","phone":"27813250429"},
+    { "name":"Support","user_id":"dd7b36e7-b573-473a-a807-15c128b41816","phone":"27671728770"},
+]
+
+async def set_users():
+    try:         
+        db = get_supabase_client(True)
+        for user in auth_users:        
+            res = db.auth.admin.update_user_by_id( user["user_id"], {
+                "phone": user["phone"],
+                "email_confirm": True,
+                "phone_confirm": True,
+            })     
+        return "completed"
+    except Exception as error:
+        log_error(error)
+        return error
+        
+             
+# Endpoints To SB
+
+
+# General
+
+def get_titles_sb():
+    try:
+        db = get_supabase_client(True)
+        response = db.schema(settings.SUPA_SCHEMA) \
+        .table("title") \
+        .select("*") \
+        .execute() 
+        return response.data    
+    except Exception as error:
+        log_error(error)
+        return error
+
+def contact_us_sb(contact:contact_us):
+    try:
+        db = get_supabase_client(True)
+        response = db.schema(settings.SUPA_SCHEMA) \
+        .table("contact") \
+        .insert({ 
+                    "subject": contact.subject,
+                    "message": contact.message,
+                    "user_id": contact.user_id,                                
+                }) \
+        .execute() 
+        return response.data    
+    except Exception as error:
+        log_error(error)
+        return error
+ 
+ 
+ 
+# Stock type
+
+def get_stock_types_sb():   
+    try:
+        db = get_supabase_client(True)
+        response = db.schema(settings.SUPA_SCHEMA) \
+        .table("stock_type") \
+        .select("*") \
+        .execute() 
+        return response.data    
+    except Exception as error:
+        log_error(error)
+        return error
+    
+def get_stock_type_sb(stock_type_id:int):
+    try:
+        db = get_supabase_client(True)
+        response = db.schema(settings.SUPA_SCHEMA) \
+        .table("stock_type") \
+        .select("*") \
+        .eq("stock_type_id",stock_type_id) \
+        .execute()  
+        return response.data        
+    except Exception as error:
+        log_error(error)
+        return error
+
+
+# Stock
+
+def get_all_stock_sb():   
+    try:
+        db = get_supabase_client(True)
+        response = db.schema(settings.SUPA_SCHEMA) \
+        .table("stock_with_details") \
+        .select("*") \
+        .execute() 
+        return response.data    
+    except Exception as error:
+        log_error(error)
+        return error
+    
+def get_stock_sb(stock_id:int):
+    try:
+        db = get_supabase_client(True)
+        response = db.schema(settings.SUPA_SCHEMA) \
+        .table("stock_with_details") \
+        .select("*") \
+        .eq("stock_id",stock_id) \
+        .execute()  
+        return response.data        
+    except Exception as error:
+        log_error(error)
+        return error
+
+    
+def create_stock_sb(stock:stock):
+    try:
+        db = get_supabase_client(True)
+        response = db.schema(settings.SUPA_SCHEMA) \
+        .table("stock") \
+        .insert({ 
+                # "stock_id": stock.stock_id,
+                "stock_type_id": stock.stock_type_id,
+                "material_id": stock.material_id,
+                "name": stock.name,
+                "description": stock.description,
+                "stock_level": stock.stock_level                   
+                     
+                }) \
+        .execute() 
+        return response.data    
+    except Exception as error:
+        log_error(error)
+        return error
+    
+def update_stock_sb(stock_id:int,stock:stock):
+    try:
+        db = get_supabase_client(True)
+        response = db.schema(settings.SUPA_SCHEMA) \
+        .table("stock") \
+        .update({ 
+                #"stock_id": stock.stock_id,
+                "stock_type_id": stock.stock_type_id,
+                "material_id": stock.material_id,
+                "name": stock.name,
+                "description": stock.description,
+                "stock_level": stock.stock_level 
+                
+                }) \
+        .eq("stock_id", stock_id) \
+        .execute() 
+        return response.data    
+    except Exception as error:
+        log_error(error)
+        return error
+    
+# Roles
+
+def get_roles_sb():
+    try:
+        db = get_supabase_client(True)
+        response = db.schema(settings.SUPA_SCHEMA) \
+        .table("role") \
+        .select("*") \
+        .execute() 
+        return response.data    
+    except Exception as error:
+        log_error(error)
+        return error
+
+def get_role_sb(role_id:int):
+    try:
+        db = get_supabase_client(True)
+        response = db.schema(settings.SUPA_SCHEMA) \
+        .table("role") \
+        .select("*") \
+        .eq("role_id",role_id) \
+        .execute() 
+        return response.data          
+    except Exception as error:
+        log_error(error)
+        return error
+    
+def create_role_sb(role:role):
+    try:
+        db = get_supabase_client(True)
+        response = db.schema(settings.SUPA_SCHEMA) \
+        .table("role") \
+        .insert({ 
+                "role_name": role.role_name
+                     
+                     
+                }) \
+        .execute() 
+        return response.data    
+    except Exception as error:
+        log_error(error)
+        return error
+    
+def update_role_sb(role_id:int,role:role):
+    try:
+        db = get_supabase_client(True)
+        response = db.schema(settings.SUPA_SCHEMA) \
+        .table("role") \
+        .update({ 
+                "role_name": role.role_name
+                        
+                        
+                }) \
+        .eq("role_id", role_id) \
+        .execute() 
+        return response.data    
+    except Exception as error:
+        log_error(error)
+        return error
+    
+# Role Claims
+
+def get_role_claims_sb():
+    try:
+        db = get_supabase_client(True)
+        response = db.schema(settings.SUPA_SCHEMA) \
+        .table("role_claim") \
+        .select("*") \
+        .execute() 
+        return response.data    
+    except Exception as error:
+        log_error(error)
+        return error
+
+# Role Claim Lines
+
+def get_role_claim_lines_sb():
+    try:
+        db = get_supabase_client(True)
+        response = db.schema(settings.SUPA_SCHEMA) \
+        .table("role_claim_line") \
+        .select("*") \
+        .execute() 
+        return response.data    
+    except Exception as error:
+        log_error(error)
+        return error
+    
+def create_role_claim_line_sb(role_claim_line:role_claim_line):
+    try:
+        db = get_supabase_client(True)
+        response = db.schema(settings.SUPA_SCHEMA) \
+        .table("role_claim_line") \
+        .insert({ 
+                "role_claim_id": role_claim_line.role_claim_id,
+                "role_id": role_claim_line.role_id,
+                "view": role_claim_line.view,
+                "create": role_claim_line.create,
+                "update": role_claim_line.update,
+                "delete": role_claim_line.delete
+                     
+                     
+                }) \
+        .execute() 
+        return response.data    
+    except Exception as error:
+        log_error(error)
+        return error
+
+def update_role_claim_line_sb(role_claim_id:int,role_id:int,role_claim_line:role_claim_line):
+    try:
+        db = get_supabase_client(True)
+        response = db.schema(settings.SUPA_SCHEMA) \
+        .table("role_claim_line") \
+        .update({ 
+                "role_claim_id": role_claim_line.role_claim_id,
+                "role_id": role_claim_line.role_id,
+                "view": role_claim_line.view,
+                "create": role_claim_line.create,
+                "update": role_claim_line.update,
+                "delete": role_claim_line.delete
+                        
+                        
+                }) \
+        .eq("role_claim_id", role_claim_id) \
+        .eq("role_id", role_id) \
+        .execute() 
+        return response.data    
+    except Exception as error:
+        log_error(error)
+        return error
+    
+    
+# Quotes
+
+def get_quotations_sb():
+    try:
+        db = get_supabase_client(True)
+        response = db.schema(settings.SUPA_SCHEMA) \
+        .table("quotations_with_detail") \
+        .select("*") \
+        .execute()  
+        return response.data        
+    except Exception as error:
+        log_error(error)
+        return error
+
+def get_quotations_user_sb(user_id:int):
+    try:
+        db = get_supabase_client(True)
+        response = db.schema(settings.SUPA_SCHEMA) \
+        .table("quotations_with_detail") \
+        .select("*") \
+        .eq("user_id",user_id) \
+        .execute()  
+        return response.data        
+    except Exception as error:
+        log_error(error)
+        return error
+
+def get_quotation_sb(quotation_id:int):
+    try:
+        db = get_supabase_client(True)
+        response = db.schema(settings.SUPA_SCHEMA) \
+        .table("quotations_with_details") \
+        .select("*") \
+        .eq("quotation_id",quotation_id) \
+        .execute()  
+        return response.data        
+    except Exception as error:
+        log_error(error)
+        return error
+ 
+def create_quotation_sb(quotation:quotation):
+    try:
+        db = get_supabase_client(True)
+     
+        response_update = db.schema(settings.SUPA_SCHEMA) \
+        .table("job_request") \
+        .update({ "job_request_status_id": 2}).eq("job_request_id", quotation.job_request_id) \
+        .execute() 
+        
+        response_insert = db.schema(settings.SUPA_SCHEMA) \
+        .table("quotations") \
+        .insert({ 
+                    "job_request_id": quotation.job_request_id,
+                    "deposit": quotation.deposit,
+                    "total_cost": quotation.total_cost,
+                    "quotation_status_id": 1,
+                    "quotation_url": quotation.quotation_url,
+                    "quotation_number": quotation.quotation_number                   
+                }).execute() 
+        
+        return response_insert.data    
+    
+    except Exception as error:
+        print(error)
+        log_error(error)
+        return error
+    
+def update_quotation_sb(quotation_id:int,quotation:quotation):
+    try:
+        db = get_supabase_client(True)
+        response = db.schema(settings.SUPA_SCHEMA) \
+        .table("quotations") \
+        .update({ 
+                "deposit": quotation.deposit,
+                "total_cost": quotation.total_cost,
+                "quotation_url": quotation.quotation_url,
+                "quotation_number": quotation.quotation_number                                     
+                }) \
+        .eq("quotation_id", quotation_id) \
+        .execute() 
+        return response.data    
+    except Exception as error:
+        log_error(error)
+        return error  
+
+def accept_quotation_sb(quotation_id:int):
+    try:
+        db = get_supabase_client(True)
+        response_quote = db.schema(settings.SUPA_SCHEMA) \
+        .table("quotations") \
+        .update({ 
+                "quotation_status_id": 2                                    
+                }) \
+        .eq("quotation_id", quotation_id) \
+        .execute() 
+        
+        
+        response_job = db.schema(settings.SUPA_SCHEMA) \
+        .table("job_card") \
+        .insert({ 
+                "job_card_status_id": 5,
+                "quotation_id": quotation_id
+                }) \
+        .execute() 
+        
+        
+
+        return {"message": "Success"}   
+    except Exception as error:
+        log_error(error)
+        return error  
+
+def reject_quotation_sb(quotation_id:int):
+    try:
+        db = get_supabase_client(True)
+        response = db.schema(settings.SUPA_SCHEMA) \
+        .table("quotations") \
+        .update({ 
+                "quotation_status_id": 3                                    
+                }) \
+        .eq("quotation_id", quotation_id) \
+        .execute() 
+        return response.data    
+    except Exception as error:
+        log_error(error)
+        return error  
+
+
+# Invoices
+
+def get_invoices_sb():
+    try:
+        db = get_supabase_client(True)
+        response = db.schema(settings.SUPA_SCHEMA) \
+        .table("invoices_with_details") \
+        .select("*") \
+        .execute()  
+        return response.data        
+    except Exception as error:
+        log_error(error)
+        return error
+    
+def get_invoices_user_sb(user_id:int):
+    try:
+        db = get_supabase_client(True)
+        response = db.schema(settings.SUPA_SCHEMA) \
+        .table("invoices_with_details_new") \
+        .select("*") \
+        .eq("user_id",user_id) \
+        .execute()  
+        return response.data        
+    except Exception as error:
+        log_error(error)
+        return error
+
+def update_invoice_sb(invoice_id:int,invoice:invoice):
+     try:
+         db = get_supabase_client(True)
+         response = db.schema(settings.SUPA_SCHEMA) \
+         .table("invoices") \
+         .update({ 
+                 "job_card_id": invoice.job_card_id,
+                 "total": invoice.total,
+                 "invoice_status_id": invoice.invoice_status_id,
+                 "invoice_url": invoice.invoice_url,
+                 "invoice_number": invoice.invoice_number,    
+                 }) \
+         .eq("invoice_id", invoice_id) \
+         .execute() 
+         return response.data    
+     except Exception as error:
+         log_error(error)
+         return error  
+     
+def update_invoice_status_sb(invoice_id: int):
+    try:
+        db = get_supabase_client(True)
+        # Only pass parameters in a single dictionary
+        response = db.rpc(
+            "update_invoice_status",
+            {'p_invoice_id': invoice_id}
+        ).execute()
+        
+        return {"status": "success", "message": f"Invoice {invoice_id} status updated to 2"}
+    except Exception as error:
+        log_error(error)
+        return {"status": "error", "message": str(error)}
+
+# supabase.py (alternative version using PostgreSQL function)
+def get_unpaid_invoices():
+    try:
+        db = get_supabase_client(True)
+        
+        # Call the PostgreSQL function
+        response = db.rpc('fn_get_unpaid_invoices').execute()
+        
+        return response.data
+        
+    except Exception as error:
+        log_error(error)
+        return {"error": str(error)}
+
+
+# Quotation status
+
+def get_quotation_statuses_sb():
+    try:
+        db = get_supabase_client(True)
+        response = db.schema(settings.SUPA_SCHEMA) \
+        .table("quotation_status") \
+        .select("*") \
+        .execute()  
+        return response.data        
+    except Exception as error:
+        log_error(error)
+        return error
+    
+def get_quotation_status_sb(quotation_status_id:int):
+    try:
+        db = get_supabase_client(True)
+        response = db.schema(settings.SUPA_SCHEMA) \
+        .table("quotation_status") \
+        .select("*") \
+        .eq("quotation_status_id",quotation_status_id) \
+        .execute()    
+        return response.data      
+    except Exception as error:
+        log_error(error)
+        return error
+
+
+# Job cards 
+
+def get_job_cards_sb():
+    try:
+        db = get_supabase_client(True)
+        response = db.schema(settings.SUPA_SCHEMA) \
+            .table("job_cards_with_details") \
+            .select("*") \
+            .execute()
+        return response.data
+    except Exception as error:
+        log_error(error)
+        return error
+
+def get_job_card_sb(job_card_id: int):
+    try:
+        db = get_supabase_client(True)
+        response = db.schema(settings.SUPA_SCHEMA) \
+            .table("job_cards_with_details") \
+            .select("*") \
+            .eq("job_card_id", job_card_id) \
+            .execute()
+        return response.data[0] if response.data else None
+    except Exception as error:
+        log_error(error)
+        return error
+
+def create_job_card_sb(job_card: job_card):
+    try:
+        db = get_supabase_client(True)
+        response = db.schema(settings.SUPA_SCHEMA) \
+            .table("job_card") \
+            .insert({ 
+                "pattern_id": job_card.pattern_id,
+                "job_card_status_id": job_card.job_card_status_id,
+                "quotation_id": job_card.quotation_id,
+                "special_instructions": job_card.special_instructions,
+                "completed_at": job_card.completed_at
+            }) \
+            .execute()
+        return response.data[0] if response.data else None
+    except Exception as error:
+        log_error(error)
+        return error
+
+def update_job_card_sb(job_card_id: int, job_card: job_card):
+    try:
+        db = get_supabase_client(True)
+        
+        # Extract only non-null values for update
+        update_data = {}
+        if job_card.pattern_id is not None:
+            update_data["pattern_id"] = job_card.pattern_id
+        if job_card.job_card_status_id is not None:
+            update_data["job_card_status_id"] = job_card.job_card_status_id
+        if job_card.quotation_id is not None:
+            update_data["quotation_id"] = job_card.quotation_id
+        if job_card.special_instructions is not None:
+            update_data["special_instructions"] = job_card.special_instructions
+        if job_card.completed_at is not None:
+            update_data["completed_at"] = job_card.completed_at
+        
+        # Only update if there are changes
+        if update_data:
+            update_response = db.schema(settings.SUPA_SCHEMA) \
+                .table("job_card") \
+                .update(update_data) \
+                .eq("job_card_id", job_card_id) \
+                .execute()
+        else:
+            return None
+        
+        # Fetch updated record
+        get_response = db.schema(settings.SUPA_SCHEMA) \
+            .table("job_cards_with_details") \
+            .select("*") \
+            .eq("job_card_id", job_card_id) \
+            .execute()
+        
+        return get_response.data[0] if get_response.data else None
+        
+    except Exception as error:
+        log_error(f"Update job card error: {str(error)}")
+        return {"error": str(error)}
+    
+def get_completed_job_cards_sb():
+    try:
+        db = get_supabase_client(True)
+        response = db.rpc(
+            "get_completed_job_cards",
+            {}
+        ).execute()
+        return response.data
+    except Exception as error:
+        log_error(error)
+        return error
+
+# Job Card Status Functions
+def get_job_card_statuses_sb():
+    try:
+        db = get_supabase_client(True)
+        response = db.schema(settings.SUPA_SCHEMA) \
+            .table("job_card_status") \
+            .select("*") \
+            .execute()
+        return response.data
+    except Exception as error:
+        log_error(error)
+        return error
+
+def get_job_card_status_sb(job_card_status_id: int):
+    try:
+        db = get_supabase_client(True)
+        response = db.schema(settings.SUPA_SCHEMA) \
+            .table("job_card_status") \
+            .select("*") \
+            .eq("job_card_status_id", job_card_status_id) \
+            .execute()
+        return response.data[0] if response.data else None
+    except Exception as error:
+        log_error(error)
+        return error
+    
+# Users
+
+def get_users_sb():
+    try:
+        db = get_supabase_client(True)
+        response = db.schema(settings.SUPA_SCHEMA) \
+        .table("users_with_details") \
+        .select("*") \
+        .execute()          
+        return response.data
+    except Exception as error:
+        log_error(error)
+        return error
+    
+def get_user_sb(user_id:int):
+    try:
+        db = get_supabase_client(True)
+        response = db.schema(settings.SUPA_SCHEMA) \
+        .table("user") \
+        .select("*") \
+        .eq("user_id",user_id) \
+        .execute()   
+        return response.data       
+    except Exception as error:
+        log_error(error)
+        return error
+ 
+def get_user_employee_sb(user_id:int):
+    try:
+        db = get_supabase_client(True)
+        response = db.schema(settings.SUPA_SCHEMA) \
+        .table("employee") \
+        .select("*,user:user_id(*)") \
+        .eq("user_id",user_id) \
+        .execute()   
+        return response.data       
+    except Exception as error:
+        log_error(error)
+        return error
+ 
+def get_user_customer_sb(user_id:int):
+    try:
+        db = get_supabase_client(True)
+        response = db.schema(settings.SUPA_SCHEMA) \
+        .table("customers") \
+        .select("*,user:user_id(*)") \
+        .eq("user_id",user_id) \
+        .execute()        
+        return response.data  
+    except Exception as error:
+        log_error(error)
+        return error
+   
+def create_user_sb(user:user):
+    try:
+        db = get_supabase_client(True)
+        response = db.schema(settings.SUPA_SCHEMA) \
+        .table("user") \
+        .insert({ 
+                "name": user.name,
+                "surname": user.surname,
+                "email_address": user.email_address,
+                "phone_number": user.phone_number,
+                "role_id": user.role_id,
+                "title_id": user.title_id,
+                "image": user.image,
+                "uuid": user.uuid,
+                "is_employee": user.is_employee
+                
+
+                     
+                     
+                }) \
+        .execute() 
+        return response.data    
+    except Exception as error:
+        log_error(error)
+        return error
+    
+def update_user_sb(user_id:int,user:user):
+    try:
+        db = get_supabase_client(True)
+        response = db.schema(settings.SUPA_SCHEMA) \
+        .table("user") \
+        .update({ 
+                "name": user.name,
+                "surname": user.surname,
+                "email_address": user.email_address,
+                "phone_number": user.phone_number,
+                "role_id": user.role_id,
+                "title_id": user.title_id,
+                "image": user.image,
+                "uuid": user.uuid,
+                "is_employee": user.is_employee
+                        
+                        
+                }) \
+        .eq("user_id", user_id) \
+        .execute() 
+        return response.data    
+    except Exception as error:
+        log_error(error)
+        return error
+    
+     
+# Employee_Type
+
+def get_types_sb():
+    try:
+        db = get_supabase_client(True)
+        response = db.schema(settings.SUPA_SCHEMA) \
+        .table("type") \
+        .select("*") \
+        .execute()    
+        return response.data       
+    except Exception as error:
+        log_error(error)
+        return error
+
+def get_type_sb(type_id:int):
+    try:
+        db = get_supabase_client(True)
+        response = db.schema(settings.SUPA_SCHEMA) \
+        .table("type") \
+        .select("*") \
+        .eq("type_id",type_id) \
+        .execute()  
+        return response.data         
+    except Exception as error:
+        log_error(error)
+        return error
+    
+def create_type_sb(type:type):
+    try:
+        db = get_supabase_client(True)
+        response = db.schema(settings.SUPA_SCHEMA) \
+        .table("type") \
+        .insert({ 
+                "type_name": type.type_name
+                     
+                     
+                }) \
+        .execute() 
+        return response.data    
+    except Exception as error:
+        log_error(error)
+        return error
+    
+def update_type_sb(type_id:int,type:type):
+    try:
+        db = get_supabase_client(True)
+        response = db.schema(settings.SUPA_SCHEMA) \
+        .table("type") \
+        .update({ 
+                "type_name": type.type_name
+                        
+                        
+                }) \
+        .eq("type_id", type_id) \
+        .execute() 
+        return response.data    
+    except Exception as error:
+        log_error(error)
+        return error 
+    
+    
+# Employee
+
+def get_employees_sb():
+    try:
+        db = get_supabase_client(True)
+        response = db.schema(settings.SUPA_SCHEMA) \
+        .table("users_with_details") \
+        .select("*") \
+        .execute()          
+        return response.data 
+    except Exception as error:
+        log_error(error)
+        return error
+    
+def get_employee_sb(employee_id:int):
+    try:
+        db = get_supabase_client(True)
+        response = db.schema(settings.SUPA_SCHEMA) \
+        .table("employee") \
+        .select("*") \
+        .eq("employee_id",employee_id) \
+        .execute()   
+        return response.data        
+    except Exception as error:
+        log_error(error)
+        return error
+    
+def create_employee_sb(employee:employee):
+    try:
+        db = get_supabase_client(True)
+        response = db.schema(settings.SUPA_SCHEMA) \
+        .table("employee") \
+        .insert({ 
+                "job_scope": employee.job_scope,
+                "address": employee.address,
+                "user_id": employee.user_id,
+                "emergency_contact": employee.emergency_contact,
+                "hourly_rate": employee.hourly_rate              
+                }) \
+        .execute() 
+        return response.data    
+    except Exception as error:
+        log_error(error)
+        return error
+    
+def update_employee_sb(employee_id:int,employee:employee):
+    try:
+        db = get_supabase_client(True)
+        response = db.schema(settings.SUPA_SCHEMA) \
+        .table("employee") \
+        .update({ 
+                "job_scope": employee.job_scope,
+                "address": employee.address,
+                "user_id": employee.user_id,
+                "emergency_contact": employee.emergency_contact,
+                "hourly_rate": employee.hourly_rate
+                        
+                        
+                }) \
+        .eq("employee_id", employee_id) \
+        .execute() 
+        return response.data    
+    except Exception as error:
+        log_error(error)
+        return error
+    
+def get_time_logs_sb():
+    try:
+        db = get_supabase_client(True)
+        response = db.schema(settings.SUPA_SCHEMA) \
+        .table("employee_time_log") \
+        .select("*,employee:employee_id(*,user:user_id(*))") \
+        .execute()          
+        return response.data 
+    except Exception as error:
+        log_error(error)
+        return error     
+
+def clock_in_sb(employee:employee):
+    try:
+        db = get_supabase_client(True)
+        response = db.schema(settings.SUPA_SCHEMA) \
+        .table("employee") \
+        .insert({ 
+                "job_scope": employee.job_scope,
+                "address": employee.address,
+                "user_id": employee.user_id,
+                "emergency_contact": employee.emergency_contact,
+                "hourly_rate": employee.hourly_rate              
+                }) \
+        .execute() 
+        return response.data    
+    except Exception as error:
+        log_error(error)
+        return error   
+
+def clock_out_sb(employee:employee):
+    try:
+        db = get_supabase_client(True)
+        response = db.schema(settings.SUPA_SCHEMA) \
+        .table("employee") \
+        .insert({ 
+                "job_scope": employee.job_scope,
+                "address": employee.address,
+                "user_id": employee.user_id,
+                "emergency_contact": employee.emergency_contact,
+                "hourly_rate": employee.hourly_rate              
+                }) \
+        .execute() 
+        return response.data    
+    except Exception as error:
+        log_error(error)
+        return error   
+   
+     
+# Employee_pay_slip
+
+def get_pay_slips_sb():
+    try:
+        db = get_supabase_client(True)
+        response = db.schema(settings.SUPA_SCHEMA) \
+        .table("employee_pay_slip") \
+        .select("*") \
+        .execute()  
+        return response.data         
+    except Exception as error:
+        log_error(error)
+        return error
+    
+def get_pay_slip_sb(employee_pay_slip_id:int):
+    try:
+        db = get_supabase_client(True)
+        response = db.schema(settings.SUPA_SCHEMA) \
+        .table("employee_pay_slip") \
+        .select("*") \
+        .eq("employee_pay_slip_id",employee_pay_slip_id) \
+        .execute() 
+        return response.data          
+    except Exception as error:
+        log_error(error)
+        return error
+    
+def create_pay_slip_sb(employee_pay_slip:employee_pay_slip):
+    try:
+        db = get_supabase_client(True)
+        response = db.schema(settings.SUPA_SCHEMA) \
+        .table("employee_pay_slip") \
+        .insert({ 
+                "salary": employee_pay_slip.salary,
+                "employee_id": employee_pay_slip.employee_id,
+                "payslip_url": employee_pay_slip.payslip_url
+
+                     
+                     
+                }) \
+        .execute() 
+        return response.data    
+    except Exception as error:
+        log_error(error)
+        return error
+    
+def update_pay_slip_sb(employee_pay_slip_id:int,employee_pay_slip:employee_pay_slip):
+    try:
+        db = get_supabase_client(True)
+        response = db.schema(settings.SUPA_SCHEMA) \
+        .table("employee_pay_slip") \
+        .update({ 
+                "salary": employee_pay_slip.salary,
+                "employee_id": employee_pay_slip.employee_id
+                        
+                        
+                }) \
+        .eq("employee_pay_slip_id", employee_pay_slip_id) \
+        .execute() 
+        return response.data    
+    except Exception as error:
+        log_error(error)
+        return error
+    
+    
+    
+# Employee_warning
+
+def get_employee_warnings_sb():
+    try:
+        db = get_supabase_client(True)
+        response = db.schema(settings.SUPA_SCHEMA) \
+        .table("employee_warning") \
+        .select("*") \
+        .execute() 
+        return response.data          
+    except Exception as error:
+        log_error(error)
+        return error
+    
+def get_employee_warning_sb(employee_warning_id:int):
+    try:
+        db = get_supabase_client(True)
+        response = db.schema(settings.SUPA_SCHEMA) \
+        .table("employee_warning") \
+        .select("*") \
+        .eq("employee_warning_id",employee_warning_id) \
+        .execute()          
+        return response.data 
+    except Exception as error:
+        log_error(error)
+        return error
+    
+def create_employee_warning_sb(employee_warning:employee_warning):
+    try:
+        db = get_supabase_client(True)
+        response = db.schema(settings.SUPA_SCHEMA) \
+        .table("employee_warning") \
+        .insert({ 
+                "reason": employee_warning.reason,
+                "employee_warning_type_id": employee_warning.employee_warning_type_id,
+                "employee_id": employee_warning.employee_id
+
+                     
+                     
+                }) \
+        .execute() 
+        return response.data    
+    except Exception as error:
+        log_error(error)
+        return error
+    
+def update_employee_warning_sb(employee_warning_id:int,employee_warning:employee_warning):
+    try:
+        db = get_supabase_client(True)
+        response = db.schema(settings.SUPA_SCHEMA) \
+        .table("employee_warning") \
+        .update({ 
+                "reason": employee_warning.reason,
+                "consequences": employee_warning.consequences,
+                "employee_id": employee_warning.employee_id
+                        
+                        
+                }) \
+        .eq("employee_warning_id", employee_warning_id) \
+        .execute() 
+        return response.data    
+    except Exception as error:
+        log_error(error)
+        return error
+    
+    
+    
+# receipt
+
+def get_receipts_sb():
+    try:
+        db = get_supabase_client(True)
+        response = db.schema(settings.SUPA_SCHEMA) \
+        .table("receipts") \
+        .select("*") \
+        .execute() 
+        return response.data    
+    except Exception as error:
+        log_error(error)
+        return error
+
+def get_receipt_sb(receipt_id:int):
+    try:
+        db = get_supabase_client(True)
+        response = db.schema(settings.SUPA_SCHEMA) \
+        .table("receipts") \
+        .select("*") \
+        .eq("receipt_id",receipt_id) \
+        .execute()          
+    except Exception as error:
+        log_error(error)
+        return error
+    
+def create_receipt_sb(receipt:receipt):
+    try:
+        db = get_supabase_client(True)
+        response = db.schema(settings.SUPA_SCHEMA) \
+        .table("receipts") \
+        .insert({ 
+                "receipt_id": receipt.receipt_id,
+                "quotation_id": receipt.quotation_id,
+                'amount_paid': receipt.amount_paid
+
+                }) \
+        .execute() 
+        return response.data
+    except Exception as error:
+        log_error(error)
+        return error 
+    
+def update_receipt_sb(receipt_id:int,receipt:receipt):
+    try:
+        db = get_supabase_client(True)
+        response = db.schema(settings.SUPA_SCHEMA) \
+        .table("receipts") \
+        .update({ 
+                "receipt_name": receipt.receipt_name
+                        
+                        
+                }) \
+        .eq("receipt_id", receipt_id) \
+        .execute() 
+        return response.data    
+    except Exception as error:
+        log_error(error)
+        return error
+             
+            
+# Customer
+def get_customers_sb():
+    try:
+        db = get_supabase_client(True)
+        response = db.schema(settings.SUPA_SCHEMA) \
+        .table("customers_with_details") \
+        .select("*") \
+        .execute()   
+        return response.data        
+    except Exception as error:
+        log_error(error)
+        return error
+                 
+def get_customer_sb(customer_id:int):
+    try:
+        db = get_supabase_client(True)
+        response = db.schema(settings.SUPA_SCHEMA) \
+        .table("customers") \
+        .select("*") \
+        .eq("customer_id",customer_id) \
+        .execute()          
+        return response.data 
+    except Exception as error:
+        log_error(error)
+        return error
+
+def create_customer_sb(customer:customer):
+    try:
+        db = get_supabase_client(True)
+        
+        auth_payload = {
+            "email":customer.email_address,
+            "phone":customer.phone_number,
+            "email_confirm": True,
+            "phone_confirm": True,
+        }
+        auth_user = db.auth.admin.create_user(auth_payload)
+        
+        print(auth_user)
+        print('*****************')
+    
+        user_data = { 
+            "role_id":6,
+            "title_id": customer.title_id,
+            "name": customer.name,
+            "surname": customer.surname,
+            "email_address": customer.email_address,
+            "phone_number": customer.phone_number,
+            "uuid": auth_user.user.id,
+            "is_employee":False
+        } 
+        response_user = db.schema(settings.SUPA_SCHEMA).table("user").insert(user_data).execute()
+        
+        print(response_user.data)
+        print('*****************')
+        
+        customer_data = { 
+            "user_id": response_user.data[0]["user_id"],  
+            "address": customer.address,
+            "company_name": customer.company_name, 
+            "registration_number": customer.registration_number, 
+            "vat_number": customer.vat_number,  
+            "telephone": customer.telephone,   
+        }
+        response_customer = db.schema(settings.SUPA_SCHEMA).table("customers").insert(customer_data).execute()
+        
+        print(response_customer)
+        print('*****************') 
+        
+        
+        if len(response_user.data) > 0 and len (response_customer.data) > 0:  
+            return {"message": "Customer created and OTP auth enabled", "auth_user_id": auth_user.user.id}
+        else:
+            return {"error": "Failed to Create Account, Please contact Admin"}
+    
+    except Exception as error:
+        log_error(error)
+        print(error)
+        return {"error": error} 
+                     
+def update_customer_sb(customer_id:int,customer:customer):
+    try:
+        db = get_supabase_client(True)
+        response = db.schema(settings.SUPA_SCHEMA) \
+        .table("customers") \
+        .update({ 
+                "customer_name": customer.customer_name,
+                "customer_surname": customer.customer_surname,
+                "customer_email": customer.customer_email,
+                "customer_phone_number": customer.customer_phone_number
+                        
+                        
+                }) \
+        .eq("customer_id", customer_id) \
+        .execute() 
+        return response.data    
+    except Exception as error:
+        log_error(error)
+        return error
+       
+def get_customer_types_sb():
+    try:
+        db = get_supabase_client(True)
+        response = db.schema(settings.SUPA_SCHEMA) \
+        .table("customer_types") \
+        .select("*") \
+        .execute()   
+        return response.data        
+    except Exception as error:
+        log_error(error)
+        return error
+                
+                  
+# Job_request
+
+
+def get_job_requests_sb():
+    try:
+        db = get_supabase_client(True)
+        response = db.schema(settings.SUPA_SCHEMA) \
+        .table("job_requests_with_items") \
+        .select("*") \
+        .execute()   
+        return response.data        
+    except Exception as error:
+        log_error(error)
+        return error
+    
+def get_job_requests_user_sb(user:int):
+    try:
+        db = get_supabase_client(True)
+        response = db.schema(settings.SUPA_SCHEMA) \
+        .table("job_requests_with_items") \
+        .select("*") \
+        .eq("user_id",user) \
+        .execute()   
+        return response.data        
+    except Exception as error:
+        log_error(error)
+        return error
+               
+def get_job_request_sb(job_request_id:int):
+    try:
+        db = get_supabase_client(True)
+        response = db.schema(settings.SUPA_SCHEMA) \
+        .table("job_request") \
+        .select("*") \
+        .eq("job_request_id",job_request_id) \
+        .execute()          
+        return response.data 
+    except Exception as error:
+        log_error(error)
+        return error
+
+def create_job_request_sb(job_request:job_request_insert):
+    try:
+        db = get_supabase_client(True)
+        response = db.schema(settings.SUPA_SCHEMA) \
+        .table("job_request") \
+        .insert({ 
+                "customer_id": job_request.customer_id,
+                "finish_date": job_request.finish_date,
+                "description": job_request.description,
+                "job_request_status_id": 1,
+                "title": job_request.title,
+                "quantity": job_request.quantity  
+                }) \
+        .execute() 
+        return response.data    
+    except Exception as error:
+        log_error(error)
+        return error
+                     
+def update_job_request_sb(job_request_id:int,job_request:job_request):
+    try:
+        db = get_supabase_client(True)
+        response = db.schema(settings.SUPA_SCHEMA) \
+        .table("job_request") \
+        .update({ 
+                "customer_id": job_request.customer_id,
+                "design": job_request.design,
+                "finish_date": job_request.finish_date,
+                "status": job_request.status               
+                }) \
+        .eq("job_request_id", job_request_id) \
+        .execute() 
+        return response.data    
+    except Exception as error:
+        log_error(error)
+        return error
+    
+def reject_job_request_sb(job_request_id:int):
+    try:
+        db = get_supabase_client(True)
+        response =  db.schema(settings.SUPA_SCHEMA) \
+        .from_("job_request") \
+        .update({ "job_request_status_id": 3}) \
+        .eq("job_request_id", job_request_id) \
+        .execute() 
+        return response.data    
+    except Exception as error: 
+        print(error) 
+        # log_error(error)
+        return error
+    
+
+def cancel_job_request_sb(job_request_id: int):
+    try:
+        db = get_supabase_client(True)
+        # Execute the update
+        update_response = db.schema(settings.SUPA_SCHEMA) \
+            .from_("job_request") \
+            .update({"job_request_status_id": 4}) \
+            .eq("job_request_id", job_request_id) \
+            .execute()
+        
+        # Verify update was successful - use the actual response attributes
+        if hasattr(update_response, 'error') and update_response.error:
+            return {"error": f"Supabase error: {update_response.error.message}"}
+        
+        # Fetch and return the updated record
+        get_response = db.schema(settings.SUPA_SCHEMA) \
+            .from_("job_request") \
+            .select("*") \
+            .eq("job_request_id", job_request_id) \
+            .execute()
+            
+        if hasattr(get_response, 'data') and get_response.data:
+            return get_response.data[0]
+        
+        return {"error": "Failed to fetch updated job request"}
+    except Exception as error: 
+        print(f"Error in cancel_job_request_sb: {str(error)}")
+        return {"error": str(error)}
+    
+# Patterns 
+
+def get_patterns_sb():   
+    try:
+        db = get_supabase_client(True)
+        response = db.schema(settings.SUPA_SCHEMA) \
+        .table("patterns") \
+        .select("*") \
+        .execute() 
+        return response.data    
+    except Exception as error:
+        log_error(error)
+        return error
+    
+def get_pattern_sb(pattern_id:int):
+    try:
+        db = get_supabase_client(True)
+        response = db.schema(settings.SUPA_SCHEMA) \
+        .table("patterns") \
+        .select("*") \
+        .eq("pattern_id",pattern_id) \
+        .execute()  
+        return response.data        
+    except Exception as error:
+        log_error(error)
+        return error
+    
+def get_pattern_types_sb():   
+    try:
+        db = get_supabase_client(True)
+        response = db.schema(settings.SUPA_SCHEMA) \
+        .table("pattern_type") \
+        .select("*") \
+        .execute() 
+        return response.data    
+    except Exception as error:
+        log_error(error)
+        return error
+    
+def get_pattern_type_sb(pattern_type_id:int):
+    try:
+        db = get_supabase_client(True)
+        response = db.schema(settings.SUPA_SCHEMA) \
+        .table("pattern_type") \
+        .select("*") \
+        .eq("pattern_type_id",pattern_type_id) \
+        .execute()  
+        return response.data        
+    except Exception as error:
+        log_error(error)
+        return error
+
+def create_pattern_sb(pattern:pattern):
+    try:
+        db = get_supabase_client(True)
+        response = db.schema(settings.SUPA_SCHEMA) \
+        .table("patterns") \
+        .insert({ 
+                "pattern_type_id": pattern.pattern_type_id,
+                "design": pattern.design
+                                }) \
+        .execute() 
+        return response.data    
+    except Exception as error:
+        log_error(error)
+        return error
+    
+# Materials
+
+def get_materials_sb():   
+    try:
+        db = get_supabase_client(True)
+        response = db.schema(settings.SUPA_SCHEMA) \
+        .table("materials") \
+        .select("*") \
+        .execute() 
+        return response.data    
+    except Exception as error:
+        log_error(error)
+        return error
+    
+def get_material_sb(material_id:int):
+    try:
+        db = get_supabase_client(True)
+        response = db.schema(settings.SUPA_SCHEMA) \
+        .table("materials") \
+        .select("*") \
+        .eq("material_id",material_id) \
+        .execute()  
+        return response.data        
+    except Exception as error:
+        log_error(error)
+        return error
+
+# Delivery Notes
+
+def get_delivery_notes_sb():
+    try:
+        db = get_supabase_client(True)
+        response = db.schema(settings.SUPA_SCHEMA) \
+        .table("delivery_note") \
+        .select("*") \
+        .execute() 
+        return response.data         
+    except Exception as error:
+        log_error(error)
+        return error
+
+def get_delivery_note_sb(delivery_note_id:int):
+    try:
+        db = get_supabase_client(True)
+        response = db.schema(settings.SUPA_SCHEMA) \
+        .table("delivery_note") \
+        .select("*") \
+        .eq("delivery_note_id",delivery_note_id) \
+        .execute()   
+        return response.data       
+    except Exception as error:
+        log_error(error)
+        return error
+
+    
+def create_delivery_note_sb(delivery_note:delivery_note):
+    try:
+        db = get_supabase_client(True)
+        response = db.schema(settings.SUPA_SCHEMA) \
+        .table("delivery_note") \
+        .insert({ 
+                "delivery_note_url": delivery_note.delivery_note_url,
+                "job_card_id": delivery_note.job_card_id   
+                                }) \
+        .execute() 
+        return response.data    
+    except Exception as error:
+        log_error(error)
+        return error
+    
+def delete_delivery_note_sb(delivery_note_id: int):
+    try:
+        db = get_supabase_client(True)
+        response = db.schema(settings.SUPA_SCHEMA) \
+            .table("delivery_note") \
+            .delete() \
+            .eq("delivery_note_id", delivery_note_id) \
+            .execute()
+        return response.data
+    except Exception as error:
+        log_error(error)
+        return error
+    
+
+
+# General
+
+def get_admin_stats_sb():
+    try:
+        db = get_supabase_client(True)
+        
+        # Jobs Requests
+        response_job_requests = db.schema(settings.SUPA_SCHEMA).table("job_request").select("*").eq("job_request_status_id",1).execute() 
+        new_requests = len(response_job_requests.data)
+        
+        
+        # Completed Job Cards
+        today = datetime.today()
+        start_of_week = today - timedelta(days=today.weekday())  # Monday
+        end_of_week = start_of_week + timedelta(days=7)          # next Monday (exclusive)
+        start_str = start_of_week.strftime('%Y-%m-%d')
+        end_str = end_of_week.strftime('%Y-%m-%d')
+        response_job_cards = db.schema(settings.SUPA_SCHEMA).table("job_card").select("*").eq("job_card_status_id", 3).gte("completed_at", start_str).lt("completed_at", end_str).execute()
+        completed_job_cards_week = len(response_job_cards.data)
+
+        
+        # Customers
+        response_total_customers = db.schema(settings.SUPA_SCHEMA).table("customers").select("*").execute() 
+        total_customers = len(response_total_customers.data)
+        
+        
+        # Employees
+        today = datetime.utcnow().date()
+        tomorrow = today + timedelta(days=1)
+        today_str = today.isoformat()         # '2025-05-23'
+        tomorrow_str = tomorrow.isoformat()   # '2025-05-24' 
+        response_employees= db.schema(settings.SUPA_SCHEMA).table("employee_time_log").select("*").gte("clock_in", today_str).lt("clock_in", tomorrow_str).execute()
+        employees_clocked_in_today = len(response_employees.data)
+
+
+        resp = {
+            "new_requests":new_requests,
+            "completed_job_cards_week":completed_job_cards_week,
+            "total_customers":total_customers,
+            "employees_clocked_in_today":employees_clocked_in_today
+        }
+        
+        
+        return resp        
+    except Exception as error:
+        log_error(error)
+        return error
+
+       
+def get_artisan_stats_sb(user_id: int):
+    try:
+        db = get_supabase_client(True)
+
+        # get employee
+        response_employee = db.schema(settings.SUPA_SCHEMA).table("employee").select("employee_id").eq("user_id",user_id).execute() 
+        employee_id = response_employee["data"][0]["employee_id"]
+        print(employee_id)
+        
+           
+        # Jobs cards
+        response_job_cards = db.schema(settings.SUPA_SCHEMA).table("job_card_artisan").select("*").eq("employee_id",employee_id).execute() 
+        # ,job_card_id(*)
+        print(response_job_cards["data"])
+
+        
+        jobs_completed = len(response_job_cards.data)
+        
+        
+        #Completed Job Cards
+        today = datetime.today()
+        start_of_week = today - timedelta(days=today.weekday())  # Monday
+        end_of_week = start_of_week + timedelta(days=7)          # next Monday (exclusive)
+        start_str = start_of_week.strftime('%Y-%m-%d')
+        end_str = end_of_week.strftime('%Y-%m-%d')
+        response_job_cards = db.schema(settings.SUPA_SCHEMA).table("job_card").select("*").eq("job_card_status_id", 3).gte("completed_at", start_str).lt("completed_at", end_str).execute()
+        completed_job_cards_week = len(response_job_cards.data)
+
+        
+       # Customers
+        response_total_customers = db.schema(settings.SUPA_SCHEMA).table("customers").select("*").execute() 
+        total_customers = len(response_total_customers.data)
+        
+        
+        #Employees
+        today = datetime.utcnow().date()
+        tomorrow = today + timedelta(days=1)
+        today_str = today.isoformat()         # '2025-05-23'
+        tomorrow_str = tomorrow.isoformat()   # '2025-05-24' 
+        response_employees= db.schema(settings.SUPA_SCHEMA).table("employee_time_log").select("*").gte("clock_in", today_str).lt("clock_in", tomorrow_str).execute()
+        employees_clocked_in_today = len(response_employees.data)
+
+
+        resp = {
+            "jobs_completed":jobs_completed,
+            # "hours_worked":completed_job_cards_week,
+            # "accumulated_pay":total_customers,
+        }
+        
+        
+        return resp        
+    except Exception as error:
+        log_error(error)
+        return error    
+    
+    
+
+    
+    #Time logs
+  
+def get_employee_time_logs_sb():
+    try:
+        db = get_supabase_client(True)
+        response = db.schema(settings.SUPA_SCHEMA) \
+        .table("employee_time_log") \
+        .select("*") \
+        .execute()  
+        return response.data        
+    except Exception as error:
+        log_error(error)
+        return error
+
+
+def get_employee_time_log_sb(employee_time_log_id:int):
+    try:
+        db = get_supabase_client(True)
+        response = db.schema(settings.SUPA_SCHEMA) \
+        .table("employee_time_log") \
+        .select("*") \
+        .eq("employee_time_log_id",employee_time_log_id) \
+        .execute()  
+        return response.data        
+    except Exception as error:
+        log_error(error)
+        return error
+
+
+def get_monthly_hours_worked(year: int):
+    try:
+        db = get_supabase_client(True)
+        
+        # Call the PostgreSQL function we created
+        response = db.rpc('fn_monthly_hours_worked_year', {
+            'p_year': year
+        }).execute()
+        
+        return response.data
+        
+    except Exception as error:
+        log_error(error)
+        return {"error": str(error)}
