@@ -208,6 +208,18 @@ def update_stock_sb(stock_id:int,stock:stock):
         log_error(error)
         return error
     
+def get_stock_export_sb():
+    try:
+        db = get_supabase_client(True)
+        response = db.schema(settings.SUPA_SCHEMA) \
+            .table("stock") \
+            .select("stock_id, name, price, stock_level") \
+            .execute()
+        return response.data
+    except Exception as error:
+        log_error(error)
+        return error
+    
 # Roles
 
 def get_roles_sb():
