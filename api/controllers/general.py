@@ -1,4 +1,4 @@
-from ..Data.supabase import get_titles_sb,contact_us_sb,get_admin_stats_sb,get_artisan_stats_sb
+from ..Data.supabase import get_titles_sb,contact_us_sb,get_admin_stats_sb,get_artisan_stats_sb, get_faqs_sb
 from ..models.general_model import contact_us
 from fastapi import APIRouter
 
@@ -35,6 +35,14 @@ async def get_artisan_stats(user_id: int):
         return response
     except Exception as error:
         return {"error": error }   
+    
+@router.get('/get_faqs')
+async def get_faqs():
+    try:
+        response = get_faqs_sb()
+        return response
+    except Exception as error:
+        return {"error": error }
         
     
     

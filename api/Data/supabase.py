@@ -1570,6 +1570,18 @@ def delete_delivery_note_sb(delivery_note_id: int):
 
 
 # General
+def get_faqs_sb():
+    try:
+        db = get_supabase_client(True)
+        response = db.schema(settings.SUPA_SCHEMA) \
+        .table("faq") \
+        .select("*") \
+        .execute() 
+        return response.data         
+    except Exception as error:
+        log_error(error)
+        return error
+
 
 def get_admin_stats_sb():
     try:
