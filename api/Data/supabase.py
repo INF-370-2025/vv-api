@@ -1510,6 +1510,61 @@ def get_material_sb(material_id:int):
     except Exception as error:
         log_error(error)
         return error
+    
+def get_materials_export_sb():
+    try:
+        db = get_supabase_client(True)
+        response = db.schema(settings.SUPA_SCHEMA) \
+            .table("materials") \
+            .select("material_name") \
+            .execute()
+        return response.data
+    except Exception as error:
+        log_error(error)
+        return error
+    
+def import_materials_sb(materials: list):
+    """Insert new materials with conflict handling"""
+    try:
+        db = get_supabase_client(True)
+        inserted_count = 0
+        duplicate_count = 0
+        
+        # Insert materials one by one with conflict handling
+        for name in materials:
+            try:
+                # Check if material already exists
+                exists = db.schema(settings.SUPA_SCHEMA).table("materials") \
+                    .select("material_name") \
+                    .eq("material_name", name) \
+                    .execute()
+                
+                if exists.data:
+                    duplicate_count += 1
+                    continue
+                
+                # Insert new material
+                response = db.schema(settings.SUPA_SCHEMA).table("materials") \
+                    .insert({"material_name": name}) \
+                    .execute()
+                
+                if response.data:
+                    inserted_count += 1
+                else:
+                    duplicate_count += 1
+                    
+            except Exception as e:
+                # Log error but continue with other materials
+                log_error(f"Error inserting material '{name}': {str(e)}")
+                duplicate_count += 1
+        
+        return {
+            "inserted_count": inserted_count,
+            "duplicate_count": duplicate_count
+        }
+    except Exception as error:
+        log_error(f"Material import error: {error}")
+        return Exception(f"Supabase import failed: {str(error)}")
 
 # Delivery Notes
 
