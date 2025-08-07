@@ -10,3 +10,4 @@ class quotation(BaseModel):
     quotation_url: Optional[str]
     quotation_number: Optional[str]
     quotation_status_id: Optional[int | None] = None
+    created_at: Optional[time] = None

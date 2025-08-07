@@ -199,7 +199,8 @@ def update_stock_sb(stock_id:int,stock:stock):
                 "material_id": stock.material_id,
                 "name": stock.name,
                 "description": stock.description,
-                "stock_level": stock.stock_level 
+                "stock_level": stock.stock_level,
+                "price": stock.price, 
                 
                 }) \
         .eq("stock_id", stock_id) \
@@ -385,7 +386,7 @@ def get_quotation_sb(quotation_id:int):
     try:
         db = get_supabase_client(True)
         response = db.schema(settings.SUPA_SCHEMA) \
-        .table("quotations_with_details") \
+        .table("quotations_with_detail") \
         .select("*") \
         .eq("quotation_id",quotation_id) \
         .execute()  
@@ -481,6 +482,18 @@ def reject_quotation_sb(quotation_id:int):
     except Exception as error:
         log_error(error)
         return error  
+    
+def get_pending_quotes_sb():
+    try:
+        db = get_supabase_client(True)
+        
+        response = db.rpc('fn_get_pending_quotes').execute()
+        
+        return response.data
+        
+    except Exception as error:
+        log_error(error)
+        return {"error": str(error)}
 
 
 # Invoices
@@ -543,7 +556,6 @@ def update_invoice_status_sb(invoice_id: int):
         log_error(error)
         return {"status": "error", "message": str(error)}
 
-# supabase.py (alternative version using PostgreSQL function)
 def get_unpaid_invoices():
     try:
         db = get_supabase_client(True)
@@ -566,7 +578,7 @@ def create_invoice_sb(invoice:invoice):
                 "job_card_id": invoice.job_card_id,
                 "total": invoice.total,
                 "invoice_url": invoice.invoice_url,
-                "invoice_status_id": invoice.invoice_status_id,
+                "invoice_status_id": 2,
                 "invoice_number": invoice.invoice_number
                                 }) \
         .execute() 
