@@ -178,7 +178,8 @@ def create_stock_sb(stock:stock):
                 "material_id": stock.material_id,
                 "name": stock.name,
                 "description": stock.description,
-                "stock_level": stock.stock_level                   
+                "stock_level": stock.stock_level,
+                "price": stock.price,               
                      
                 }) \
         .execute() 
@@ -429,7 +430,8 @@ def update_quotation_sb(quotation_id:int,quotation:quotation):
                 "deposit": quotation.deposit,
                 "total_cost": quotation.total_cost,
                 "quotation_url": quotation.quotation_url,
-                "quotation_number": quotation.quotation_number                                     
+                "quotation_number": quotation.quotation_number,       
+                "quotation_status_id": quotation.quotation_status_id                            
                 }) \
         .eq("quotation_id", quotation_id) \
         .execute() 
@@ -554,6 +556,24 @@ def get_unpaid_invoices():
     except Exception as error:
         log_error(error)
         return {"error": str(error)}
+    
+def create_invoice_sb(invoice:invoice):
+    try:
+        db = get_supabase_client(True)
+        response = db.schema(settings.SUPA_SCHEMA) \
+        .table("invoices") \
+        .insert({ 
+                "job_card_id": invoice.job_card_id,
+                "total": invoice.total,
+                "invoice_url": invoice.invoice_url,
+                "invoice_status_id": invoice.invoice_status_id,
+                "invoice_number": invoice.invoice_number
+                                }) \
+        .execute() 
+        return response.data    
+    except Exception as error:
+        log_error(error)
+        return error
 
 
 # Quotation status

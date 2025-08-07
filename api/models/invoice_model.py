@@ -1,6 +1,7 @@
 from pydantic import BaseModel
 
 class invoice(BaseModel):
+    invoice_id:int
     job_card_id:int
     total:float
     invoice_status_id:int

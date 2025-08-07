@@ -1,4 +1,4 @@
-from ..Data.supabase import get_invoices_sb, get_invoices_user_sb, update_invoice_status_sb, update_invoice_sb, get_unpaid_invoices
+from ..Data.supabase import get_invoices_sb, get_invoices_user_sb, update_invoice_status_sb, update_invoice_sb, get_unpaid_invoices, create_invoice_sb
 from fastapi import APIRouter
 from ..models.quotation_model import quotation
 from ..models.invoice_model import invoice
@@ -50,3 +50,12 @@ async def unpaid_invoices_report():
         
     except Exception as error:
         return {"error": str(error)}
+    
+    
+@router.post('/create_invoice')
+async def create_invoice(invoice:invoice):
+    try:
+        response = create_invoice_sb(invoice)
+        return response
+    except Exception as error:
+        return {"error": error } 
