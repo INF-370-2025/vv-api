@@ -9,9 +9,10 @@ from ..Data.supabase import (
     get_job_card_status_sb, 
     get_completed_job_cards_sb,
     get_job_card_with_materials_sb,
-    get_job_card_artisans_sb
+    get_job_card_artisans_sb,
+    get_job_card_update_sb
 )
-from ..models.job_card_model import job_card, JobCardWithMaterials, JobCardUpdate
+from ..models.job_card_model import job_card, JobCardWithMaterials, JobCardUpdate, JobCardCreate
 
 router = APIRouter()
 
@@ -32,8 +33,12 @@ async def get_job_cards():
 async def get_job_card(job_card_id: int):
     return get_job_card_sb(job_card_id)
 
+@router.get('/get_job_card_update/{job_card_id}')
+async def get_job_card_update(job_card_id: int):
+    return get_job_card_update_sb(job_card_id)
+
 @router.post('/create_job_card')
-async def create_job_card(job_card: job_card):
+async def create_job_card(job_card: JobCardCreate):  
     return create_job_card_sb(job_card)
 
 @router.put('/update_job_card/{job_card_id}')

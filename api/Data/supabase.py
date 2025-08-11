@@ -2,7 +2,7 @@ from supabase import create_client
 from ..config import settings
 from ..models.role_model import role, role_claim, role_claim_line
 from ..models.quotation_model import quotation
-from ..models.job_card_model import job_card
+from ..models.job_card_model import JobCardCreate
 from ..models.user_model import user
 from ..models.type_model import type
 from ..models.employee_model import employee
@@ -642,21 +642,68 @@ def get_job_card_sb(job_card_id: int):
     except Exception as error:
         log_error(error)
         return error
-
-def create_job_card_sb(job_card: job_card):
+    
+def get_job_card_update_sb(job_card_id: int):
     try:
         db = get_supabase_client(True)
         response = db.schema(settings.SUPA_SCHEMA) \
-            .table("job_card") \
-            .insert({ 
-                "pattern_id": job_card.pattern_id,
-                "job_card_status_id": job_card.job_card_status_id,
-                "quotation_id": job_card.quotation_id,
-                "special_instructions": job_card.special_instructions,
-                "completed_at": job_card.completed_at
-            }) \
+            .table("job_cards_with_details_update") \
+            .select("*") \
+            .eq("job_card_id", job_card_id) \
             .execute()
         return response.data[0] if response.data else None
+    except Exception as error:
+        log_error(error)
+        return error
+
+def create_job_card_sb(job_card: JobCardCreate):  # Changed model type
+    try:
+        db = get_supabase_client(True)
+        
+        # Prepare the main job card data
+        job_card_data = {
+            "pattern_id": job_card.pattern_id,
+            "job_card_status_id": job_card.job_card_status_id,
+            "quotation_id": job_card.quotation_id,
+            "special_instructions": job_card.special_instructions,
+            "completed_at": job_card.completed_at
+        }
+        
+        # Create main job card
+        response = db.schema(settings.SUPA_SCHEMA) \
+            .table("job_card") \
+            .insert(job_card_data) \
+            .execute()
+        
+        if not response.data:
+            return None
+            
+        new_job_card = response.data[0]
+        job_card_id = new_job_card['job_card_id']
+        
+        # Insert materials into bridging table
+        if job_card.materials:
+            for material_id in job_card.materials:
+                db.schema(settings.SUPA_SCHEMA) \
+                    .table("job_card_material") \
+                    .insert({
+                        "job_card_id": job_card_id,
+                        "material_id": material_id
+                    }) \
+                    .execute()
+        
+        # Insert artisans into bridging table
+        if job_card.artisans:
+            for employee_id in job_card.artisans:
+                db.schema(settings.SUPA_SCHEMA) \
+                    .table("job_card_artisan") \
+                    .insert({
+                        "job_card_id": job_card_id,
+                        "employee_id": employee_id
+                    }) \
+                    .execute()
+        
+        return new_job_card
     except Exception as error:
         log_error(error)
         return error
@@ -1670,6 +1717,19 @@ def create_pattern_sb(pattern:pattern):
                                 }) \
         .execute() 
         return response.data    
+    except Exception as error:
+        log_error(error)
+        return error
+    
+def delete_pattern_sb(pattern_id: int):
+    try:
+        db = get_supabase_client(True)
+        response = db.schema(settings.SUPA_SCHEMA) \
+            .table("patterns") \
+            .delete() \
+            .eq("pattern_id", pattern_id) \
+            .execute()
+        return response.data
     except Exception as error:
         log_error(error)
         return error
