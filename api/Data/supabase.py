@@ -373,7 +373,7 @@ def get_quotations_user_sb(user_id:int):
     try:
         db = get_supabase_client(True)
         response = db.schema(settings.SUPA_SCHEMA) \
-        .table("quotations_with_detail") \
+        .table("quotations_with_details") \
         .select("*") \
         .eq("user_id",user_id) \
         .execute()  
