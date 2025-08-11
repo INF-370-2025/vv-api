@@ -1,3 +1,4 @@
+from http.client import HTTPException
 from fastapi import APIRouter
 from ..Data.supabase import (
     get_job_cards_sb,
@@ -6,9 +7,11 @@ from ..Data.supabase import (
     update_job_card_sb,
     get_job_card_statuses_sb,
     get_job_card_status_sb, 
-    get_completed_job_cards_sb
+    get_completed_job_cards_sb,
+    get_job_card_with_materials_sb,
+    get_job_card_artisans_sb
 )
-from ..models.job_card_model import job_card
+from ..models.job_card_model import job_card, JobCardWithMaterials, JobCardUpdate
 
 router = APIRouter()
 
@@ -34,9 +37,30 @@ async def create_job_card(job_card: job_card):
     return create_job_card_sb(job_card)
 
 @router.put('/update_job_card/{job_card_id}')
-async def update_job_card(job_card_id: int, job_card: job_card):
-    return update_job_card_sb(job_card_id, job_card)
+async def update_job_card(job_card_id: int, update_data: JobCardUpdate):
+    return update_job_card_sb(job_card_id, update_data.dict())
 
 @router.get('/get_completed_job_cards')
 async def get_completed_job_cards():
     return get_completed_job_cards_sb()
+
+@router.get('/get_job_card_with_materials/{job_card_id}', response_model=JobCardWithMaterials)
+async def get_job_card_with_materials(job_card_id: int):
+    result = get_job_card_with_materials_sb(job_card_id)
+    
+    if isinstance(result, Exception):
+        raise HTTPException(
+            status_code=500, 
+            detail=f"Error fetching job card: {str(result)}"
+        )
+    if not result:
+        raise HTTPException(
+            status_code=404, 
+            detail="Job card not found"
+        )
+    
+    return result
+
+@router.get('/get_job_card_artisans/{job_card_id}')
+async def get_job_card_artisans(job_card_id: int):
+    return get_job_card_artisans_sb(job_card_id)
