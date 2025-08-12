@@ -1,5 +1,5 @@
 from typing import Optional
-from ..Data.supabase import get_stock_sb, create_stock_sb, update_stock_sb, get_all_stock_sb, get_stock_type_sb, get_stock_types_sb, get_stock_export_sb
+from ..Data.supabase import get_stock_sb, create_stock_sb, update_stock_sb, get_all_stock_sb, get_stock_type_sb, get_stock_types_sb, get_stock_export_sb, get_stock_categories_sb
 from ..models.general_model import contact_us
 from fastapi import APIRouter
 from ..models.stock_model import stock
@@ -45,6 +45,14 @@ async def get_stock(stock_id:int):
         return response
     except Exception as error:
         return {"error": error }    
+    
+@router.get('/get_stock_categories')
+async def get_stock_categories():
+    try:
+        response = get_stock_categories_sb()
+        return response
+    except Exception as error:
+        return {"error": error } 
 
 @router.post('/create_stock')
 async def create_stock(stock:stock):

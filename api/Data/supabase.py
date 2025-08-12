@@ -165,6 +165,18 @@ def get_stock_sb(stock_id:int):
     except Exception as error:
         log_error(error)
         return error
+    
+def get_stock_categories_sb():   
+    try:
+        db = get_supabase_client(True)
+        response = db.schema(settings.SUPA_SCHEMA) \
+        .table("stock_category") \
+        .select("*") \
+        .execute() 
+        return response.data    
+    except Exception as error:
+        log_error(error)
+        return error
 
     
 def create_stock_sb(stock:stock):
