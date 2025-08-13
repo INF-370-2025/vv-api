@@ -1122,6 +1122,43 @@ def get_employee_sb(employee_id:int):
         log_error(error)
         return error
     
+def get_employee_by_phone_sb(phone: str):
+    try:
+        # Convert to digits-only format and ensure proper prefix
+        clean_phone = ''.join(filter(str.isdigit, phone))
+        
+        # Handle South African numbers starting with 0
+        if clean_phone.startswith('0') and len(clean_phone) == 10:
+            clean_phone = '27' + clean_phone[1:]
+        elif clean_phone.startswith('27') and len(clean_phone) == 11:
+            # Already in correct format
+            pass
+        else:
+            # Handle other formats
+            clean_phone = clean_phone.lstrip('+')
+            if not clean_phone.startswith('27') and len(clean_phone) == 9:
+                clean_phone = '27' + clean_phone
+        
+        db = get_supabase_client(True)
+        
+        # Query to get employee by phone number
+        response = db.schema(settings.SUPA_SCHEMA) \
+            .from_("user") \
+            .select("employee(employee_id, user_id)") \
+            .eq("phone_number", clean_phone) \
+            .execute()
+        
+        # Check if we got results
+        if response.data and len(response.data) > 0:
+            user_data = response.data[0]
+            if user_data.get("employee") and len(user_data["employee"]) > 0:
+                return user_data["employee"][0]  # Return first employee record
+        return None
+        
+    except Exception as error:
+        log_error(f"Error in get_employee_by_phone_sb: {str(error)}")
+        return None
+    
 def create_employee_sb(employee:employee):
     try:
         db = get_supabase_client(True)
@@ -1172,42 +1209,161 @@ def get_time_logs_sb():
     except Exception as error:
         log_error(error)
         return error     
-
-def clock_in_sb(employee:employee):
+    
+def create_clock_code_sb(code: int, type: str, expires_at: datetime):
     try:
         db = get_supabase_client(True)
         response = db.schema(settings.SUPA_SCHEMA) \
-        .table("employee") \
-        .insert({ 
-                "job_scope": employee.job_scope,
-                "address": employee.address,
-                "user_id": employee.user_id,
-                "emergency_contact": employee.emergency_contact,
-                "hourly_rate": employee.hourly_rate              
-                }) \
-        .execute() 
-        return response.data    
+            .table("employee_clock_codes") \
+            .insert({ 
+                "code": code,
+                "type": type,
+                "expires_at": expires_at.isoformat()
+            }) \
+            .execute()
+        
+        return response.data[0] if response.data else None
     except Exception as error:
-        log_error(error)
-        return error   
+        log_error(f"create_clock_code_sb error: {error}")
+        raise error
 
-def clock_out_sb(employee:employee):
+def verify_clock_code_sb(code: int, type: str):
+    try:
+        db = get_supabase_client(True)
+        current_time = datetime.utcnow().isoformat()
+        
+        # Check for valid code
+        response = db.schema(settings.SUPA_SCHEMA) \
+            .table("employee_clock_codes") \
+            .select("*") \
+            .eq("code", code) \
+            .eq("type", type) \
+            .gt("expires_at", current_time) \
+            .execute()
+        
+        if not response.data or len(response.data) == 0:
+            return {
+                "valid": False,
+                "message": "Invalid or expired code"
+            }
+        
+        return {"valid": True, "message": "Code verified"}
+    
+    except Exception as error:
+        return {
+            "valid": False,
+            "message": f"Verification error: {str(error)}"
+        }
+
+def clock_in_sb(employee_id: int, clock_in_time: str):
     try:
         db = get_supabase_client(True)
         response = db.schema(settings.SUPA_SCHEMA) \
-        .table("employee") \
-        .insert({ 
-                "job_scope": employee.job_scope,
-                "address": employee.address,
-                "user_id": employee.user_id,
-                "emergency_contact": employee.emergency_contact,
-                "hourly_rate": employee.hourly_rate              
-                }) \
-        .execute() 
-        return response.data    
+            .table("employee_time_log") \
+            .insert({
+                "employee_id": employee_id,
+                "clock_in": clock_in_time
+            }) \
+            .execute()
+        return response.data[0] if response.data else None
     except Exception as error:
-        log_error(error)
-        return error   
+        log_error(f"clock_in_sb error: {error}")
+        raise error
+
+def clock_out_sb(employee_id: int, clock_out_time: str):
+    try:
+        db = get_supabase_client(True)
+        # Find latest clock-in without clock-out
+        response = db.schema(settings.SUPA_SCHEMA) \
+            .table("employee_time_log") \
+            .select("employee_time_log_id") \
+            .eq("employee_id", employee_id) \
+            .is_("clock_out", "null") \
+            .order("clock_in", desc=True) \
+            .limit(1) \
+            .execute()
+        
+        if not response.data or len(response.data) == 0:
+            raise ValueError("No active clock-in found")
+        
+        log_id = response.data[0]['employee_time_log_id']
+        
+        # Update with clock-out time
+        update_response = db.schema(settings.SUPA_SCHEMA) \
+            .table("employee_time_log") \
+            .update({"clock_out": clock_out_time}) \
+            .eq("employee_time_log_id", log_id) \
+            .execute()
+        
+        return update_response.data[0] if update_response.data else None
+    except Exception as error:
+        log_error(f"clock_out_sb error: {error}")
+        raise error
+
+def invalidate_previous_codes(employee_id: int, type: str):
+    try:
+        db = get_supabase_client(True)
+        db.schema(settings.SUPA_SCHEMA) \
+            .table("employee_clock_codes") \
+            .update({"used": True}) \
+            .eq("employee_id", employee_id) \
+            .eq("type", type) \
+            .eq("used", False) \
+            .execute()
+    except Exception as error:
+        log_error(f"invalidate_previous_codes error: {error}")
+        raise error
+
+
+def get_employee_time_logs_by_id_sb(employee_id: int):
+    try:
+        db = get_supabase_client(True)
+        response = db.schema("development") \
+            .table("employee_time_log") \
+            .select("*") \
+            .eq("employee_id", employee_id) \
+            .order("clock_in", desc=True) \
+            .execute()
+        
+        return response.data
+    except Exception as error:
+        print(f"Error fetching employee logs: {str(error)}")
+        return {"error": str(error)}
+# def clock_in_sb(employee:employee):
+#     try:
+#         db = get_supabase_client(True)
+#         response = db.schema(settings.SUPA_SCHEMA) \
+#         .table("employee") \
+#         .insert({ 
+#                 "job_scope": employee.job_scope,
+#                 "address": employee.address,
+#                 "user_id": employee.user_id,
+#                 "emergency_contact": employee.emergency_contact,
+#                 "hourly_rate": employee.hourly_rate              
+#                 }) \
+#         .execute() 
+#         return response.data    
+#     except Exception as error:
+#         log_error(error)
+#         return error   
+
+# def clock_out_sb(employee:employee):
+#     try:
+#         db = get_supabase_client(True)
+#         response = db.schema(settings.SUPA_SCHEMA) \
+#         .table("employee") \
+#         .insert({ 
+#                 "job_scope": employee.job_scope,
+#                 "address": employee.address,
+#                 "user_id": employee.user_id,
+#                 "emergency_contact": employee.emergency_contact,
+#                 "hourly_rate": employee.hourly_rate              
+#                 }) \
+#         .execute() 
+#         return response.data    
+#     except Exception as error:
+#         log_error(error)
+#         return error   
     
 def get_artisans_sb():
     try:
