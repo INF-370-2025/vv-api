@@ -563,7 +563,7 @@ def update_invoice_status_sb(invoice_id: int):
             {'p_invoice_id': invoice_id}
         ).execute()
         
-        return {"status": "success", "message": f"Invoice {invoice_id} status updated to 2"}
+        return {"status": "success", "message": f"Invoice {invoice_id} status updated to 1"}
     except Exception as error:
         log_error(error)
         return {"status": "error", "message": str(error)}
@@ -1994,6 +1994,19 @@ def get_delivery_notes_sb():
         .select("*") \
         .execute() 
         return response.data         
+    except Exception as error:
+        log_error(error)
+        return error
+    
+def get_delivery_notes_user_sb(user:int):
+    try:
+        db = get_supabase_client(True)
+        response = db.schema(settings.SUPA_SCHEMA) \
+        .table("delivery_notes_with_details") \
+        .select("*") \
+        .eq("user_id",user) \
+        .execute()   
+        return response.data        
     except Exception as error:
         log_error(error)
         return error

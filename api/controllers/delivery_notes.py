@@ -1,4 +1,4 @@
-from ..Data.supabase import get_delivery_note_sb, create_delivery_note_sb, get_delivery_notes_sb, delete_delivery_note_sb
+from ..Data.supabase import get_delivery_note_sb, create_delivery_note_sb, get_delivery_notes_sb, delete_delivery_note_sb, get_delivery_notes_user_sb
 from fastapi import APIRouter
 from ..models.delivery_note_model import delivery_note
 
@@ -36,6 +36,14 @@ async def delete_delivery_note(delivery_note_id: int):
         return response
     except Exception as error:
         return {"error": error}
+    
+@router.get('/get_devlivery_notes_user/{user_id}')
+async def get_devlivery_notes_user(user_id:int):
+    try:
+        response = get_delivery_notes_user_sb(user_id)
+        return response
+    except Exception as error:
+        return {"error": error } 
      
     
 
