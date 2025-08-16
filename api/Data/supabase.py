@@ -191,7 +191,7 @@ def create_stock_sb(stock:stock):
                 "name": stock.name,
                 "description": stock.description,
                 "stock_level": stock.stock_level,
-                "price": stock.price,               
+                "stock_price": stock.stock_price,               
                      
                 }) \
         .execute() 
@@ -212,7 +212,7 @@ def update_stock_sb(stock_id:int,stock:stock):
                 "name": stock.name,
                 "description": stock.description,
                 "stock_level": stock.stock_level,
-                "price": stock.price, 
+                "stock_price": stock.stock_price, 
                 
                 }) \
         .eq("stock_id", stock_id) \
@@ -227,7 +227,7 @@ def get_stock_export_sb():
         db = get_supabase_client(True)
         response = db.schema(settings.SUPA_SCHEMA) \
             .table("stock") \
-            .select("stock_id, name, price, stock_level") \
+            .select("stock_id, name, stock_price, stock_level") \
             .execute()
         return response.data
     except Exception as error:
@@ -545,7 +545,8 @@ def update_invoice_sb(invoice_id:int,invoice:invoice):
                  "total": invoice.total,
                  "invoice_status_id": invoice.invoice_status_id,
                  "invoice_url": invoice.invoice_url,
-                 "invoice_number": invoice.invoice_number,    
+                 "invoice_number": invoice.invoice_number,  
+                 "pop": invoice.pop  
                  }) \
          .eq("invoice_id", invoice_id) \
          .execute() 
@@ -598,7 +599,26 @@ def create_invoice_sb(invoice:invoice):
     except Exception as error:
         log_error(error)
         return error
-
+    
+# Add to supabase.py
+def update_invoice_pop_sb(invoice_id: int, pop_url: str):
+    """
+    Update only the POP field of an invoice
+    """
+    try:
+        db = get_supabase_client(True)
+        response = db.schema(settings.SUPA_SCHEMA) \
+            .table("invoices") \
+            .update({"pop": pop_url}) \
+            .eq("invoice_id", invoice_id) \
+            .execute()
+            
+        if response.data:
+            return {"status": "success", "message": "POP updated"}
+        return {"error": "No rows updated"}
+    except Exception as error:
+        log_error(f"Supabase POP update error: {error}")
+        return {"error": str(error)}
 
 # Quotation status
 

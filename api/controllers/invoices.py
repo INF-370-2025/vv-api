@@ -1,4 +1,4 @@
-from ..Data.supabase import get_invoices_sb, get_invoices_user_sb, update_invoice_status_sb, update_invoice_sb, get_unpaid_invoices, create_invoice_sb
+from ..Data.supabase import get_invoices_sb, get_invoices_user_sb, log_error, update_invoice_status_sb, update_invoice_sb, get_unpaid_invoices, create_invoice_sb, update_invoice_pop_sb
 from fastapi import APIRouter
 from ..models.quotation_model import quotation
 from ..models.invoice_model import invoice
@@ -59,3 +59,19 @@ async def create_invoice(invoice:invoice):
         return response
     except Exception as error:
         return {"error": error } 
+    
+    
+@router.patch('/update_invoice_pop/{invoice_id}')
+async def update_invoice_pop(invoice_id: int, data: dict):
+    """
+    Update Proof of Payment for an invoice
+    """
+    try:
+        if 'pop' not in data or not data['pop']:
+            return {"error": "POP URL is required"}
+            
+        response = update_invoice_pop_sb(invoice_id, data['pop'])
+        return response
+    except Exception as error:
+        log_error(f"Error updating POP: {error}")
+        return {"error": str(error)}

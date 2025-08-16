@@ -7,4 +7,4 @@ class stock(BaseModel):
     name: str
     description: str
     stock_level: int
-    price: int
+    stock_price: float

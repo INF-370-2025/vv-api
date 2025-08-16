@@ -45,7 +45,7 @@ async def get_pattern_type(pattern_type_id:int):
     except Exception as error:
         return {"error": error }  
     
-@router.delete('/delete_pattern/pattern_id}')
+@router.delete('/delete_pattern/{pattern_id}')
 async def delete_pattern(pattern_id: int):
     try:
         response = delete_pattern_sb(pattern_id)

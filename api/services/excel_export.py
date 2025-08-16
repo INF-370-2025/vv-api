@@ -8,7 +8,7 @@ logger = logging.getLogger(__name__)
 def export_stock_to_excel(data: list):
     try:
         # Create DataFrame with required columns
-        required_columns = ['stock_id', 'name', 'price', 'stock_level']  # Added stock_level
+        required_columns = ['stock_id', 'name', 'stock_price', 'stock_level']  # Added stock_level
         df = pd.DataFrame(data)
         
         # Ensure required columns exist

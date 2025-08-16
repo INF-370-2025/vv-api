@@ -7,3 +7,4 @@ class invoice(BaseModel):
     invoice_status_id:int
     invoice_url:str
     invoice_number:str
+    pop: str
