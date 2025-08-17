@@ -13,3 +13,11 @@ class customer(BaseModel):
     registration_number:Optional[str | None] = None
     vat_number:Optional[str | None] = None
     address:Optional[str | None] = None
+
+class updateCustomer(BaseModel):
+    user_id:int
+    company_name:str
+    telephone:str
+    registration_number:str
+    vat_number:str
+    address:str
