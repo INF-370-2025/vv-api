@@ -11,7 +11,7 @@ from ..models.employee_warning_model import employee_warning
 from ..models.receipt_model import receipt 
 from ..models.customers_model import customer, updateCustomer
 from ..models.job_request_model import job_request, job_request_insert
-from ..models.general_model import contact_us
+from ..models.general_model import contact_us, logout_timer
 from ..models.invoice_model import invoice
 from ..models.stock_model import stock
 from ..models.pattern_model import pattern
@@ -109,8 +109,39 @@ def contact_us_sb(contact:contact_us):
         log_error(error)
         return error
  
+
+#Timer
+
+def get_logout_timer_sb(timer_id:int):
+        try:
+            db = get_supabase_client(True)
+            response = db.schema(settings.SUPA_SCHEMA) \
+                .table("logout_timer") \
+                .select("*") \
+                .eq("timer_id",timer_id) \
+                .execute() 
+            return response.data          
+        except Exception as error:
+            log_error(error)
+            return error
  
  
+def update_logout_timer_sb(timer_id:int,logout_timer:logout_timer):
+    try:
+        db = get_supabase_client(True)
+        response = db.schema(settings.SUPA_SCHEMA) \
+        .table("logout_timer") \
+        .update({ 
+                "time": logout_timer.time
+                
+                }) \
+        .eq("timer_id", timer_id) \
+        .execute() 
+        return response.data    
+    except Exception as error:
+        log_error(error)
+        return error
+
 # Stock type
 
 def get_stock_types_sb():   
@@ -1733,3 +1764,7 @@ def get_monthly_hours_worked(year: int):
     except Exception as error:
         log_error(error)
         return {"error": str(error)}
+
+
+
+# Timer

@@ -11,3 +11,6 @@ class faq(BaseModel):
     faq_id: int
     faq_q: str
     faq_a: str
+
+class logout_timer(BaseModel):
+    time: int
