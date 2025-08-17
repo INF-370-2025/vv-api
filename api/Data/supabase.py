@@ -9,7 +9,7 @@ from ..models.employee_model import employee
 from ..models.employee_pay_slip_model import employee_pay_slip
 from ..models.employee_warning_model import employee_warning
 from ..models.receipt_model import receipt 
-from ..models.customers_model import customer
+from ..models.customers_model import customer, updateCustomer
 from ..models.job_request_model import job_request, job_request_insert
 from ..models.general_model import contact_us
 from ..models.invoice_model import invoice
@@ -1262,16 +1262,18 @@ def create_customer_sb(customer:customer):
         print(error)
         return {"error": error} 
                      
-def update_customer_sb(customer_id:int,customer:customer):
+def update_customer_sb(customer_id:int,customer:updateCustomer):
     try:
         db = get_supabase_client(True)
         response = db.schema(settings.SUPA_SCHEMA) \
         .table("customers") \
         .update({ 
-                "customer_name": customer.customer_name,
-                "customer_surname": customer.customer_surname,
-                "customer_email": customer.customer_email,
-                "customer_phone_number": customer.customer_phone_number
+                "user_id": customer.user_id,
+                "address": customer.address,
+                "company_name": customer.company_name,
+                "registration_number": customer.registration_number,
+                "telephone": customer.telephone,
+                "vat_number": customer.vat_number
                         
                         
                 }) \

@@ -1,6 +1,6 @@
 from ..Data.supabase import get_customers_sb,get_customer_sb,create_customer_sb,update_customer_sb,get_customer_types_sb
 from fastapi import APIRouter
-from ..models.customers_model import customer
+from ..models.customers_model import customer, updateCustomer
 
 router = APIRouter()
 
@@ -30,7 +30,7 @@ async def create_customer(customer:customer):
         return {"error": error } 
     
 @router.put('/update_customer/{customer_id}')
-async def update_customer(customer_id:int,customer:customer):
+async def update_customer(customer_id:int,customer:updateCustomer):
     try:
         response = update_customer_sb(customer_id,customer)
         return response
