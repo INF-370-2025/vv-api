@@ -9,5 +9,5 @@ class quotation(BaseModel):
     total_cost: Optional[float]
     quotation_url: Optional[str]
     quotation_number: Optional[str]
-    created_at: Optional[time]
-
+    quotation_status_id: Optional[int | None] = None
+    created_at: Optional[time] = None

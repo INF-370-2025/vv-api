@@ -1,5 +1,6 @@
+from typing import Optional
 from pydantic import BaseModel
-from datetime import time
+from datetime import date
 
 class job_request(BaseModel):
     job_request_id:int
@@ -12,6 +13,7 @@ class job_request(BaseModel):
     title:str
     quantity:int
     progress_url:str
+    created_at: Optional[str] = None
     
     
     

@@ -26,3 +26,5 @@ This is a [FastAPI](https://github.com/fastapi/fastapi) python api.
 
 For swaggerUI, goto: http://127.0.0.1:8000/docs
 
+<!-- pip install pandas xlsxwriter -->
+<!-- pip install pandas openpyxl python-docx -->

@@ -1,4 +1,4 @@
-from ..Data.supabase import get_quotations_sb,get_quotation_sb,create_quotation_sb,update_quotation_sb, get_quotation_statuses_sb, get_quotation_status_sb,get_quotations_user_sb,accept_quotation_sb,reject_quotation_sb
+from ..Data.supabase import get_quotations_sb,get_quotation_sb,create_quotation_sb,update_quotation_sb, get_quotation_statuses_sb, get_quotation_status_sb,get_quotations_user_sb,accept_quotation_sb,reject_quotation_sb, get_pending_quotes_sb
 from fastapi import APIRouter
 from ..models.quotation_model import quotation
 
@@ -79,3 +79,18 @@ async def reject_quotation(quotation_id:int):
         return response
     except Exception as error:
         return {"error": error }       
+    
+@router.get('/pending_quotes')
+async def get_pending_quotes():
+    try:
+        result = get_pending_quotes_sb()
+        
+        # Handle database errors
+        if isinstance(result, dict) and 'error' in result:
+            return {"error": result['error']}
+            
+        # Return sorted data by invoice number
+        return sorted(result, key=lambda x: x['quotation_number'] or '')
+        
+    except Exception as error:
+        return {"error": str(error)}
