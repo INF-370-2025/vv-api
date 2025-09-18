@@ -1,4 +1,4 @@
-from ..Data.supabase import get_invoices_sb, get_invoices_user_sb, log_error, update_invoice_status_sb, update_invoice_sb, get_unpaid_invoices, create_invoice_sb, update_invoice_pop_sb
+from ..Data.supabase import get_invoices_sb, get_invoices_user_sb, log_error, update_invoice_status_sb, update_invoice_sb, get_unpaid_invoices, create_invoice_sb, update_invoice_pop_sb, update_invoice_job_card_sb
 from fastapi import APIRouter
 from ..models.quotation_model import quotation
 from ..models.invoice_model import invoice
@@ -75,3 +75,17 @@ async def update_invoice_pop(invoice_id: int, data: dict):
     except Exception as error:
         log_error(f"Error updating POP: {error}")
         return {"error": str(error)}
+    
+@router.post('/payfast-confirm/{invoice_id}')
+async def confirm_payfast_payment(invoice_id: int):
+
+    try:
+        response = update_invoice_status_sb(invoice_id)
+        return response
+    except Exception as error:
+        log_error(f"Error confirming PayFast payment: {error}")
+        return {"error": str(error)}
+    
+@router.put('/update_invoice_job_card/{invoice_id}/{job_card_id}')
+async def update_invoice_job_card(invoice_id: int, job_card_id: int):
+    return update_invoice_job_card_sb(invoice_id, job_card_id)

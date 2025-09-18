@@ -1,5 +1,7 @@
 from pydantic import BaseModel
 from datetime import datetime, time
+from typing import Optional
+
 
 
 class EmployeeTimeLog(BaseModel):
@@ -20,3 +22,7 @@ class VerifyClockCodeRequest(BaseModel):
     employee_id: int
     code: int
     type: str 
+    
+class GenerateClockCodeRequest(BaseModel):
+    type: str
+    expires_in: Optional[int] = 5

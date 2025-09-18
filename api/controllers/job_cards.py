@@ -10,7 +10,8 @@ from ..Data.supabase import (
     get_completed_job_cards_sb,
     get_job_card_with_materials_sb,
     get_job_card_artisans_sb,
-    get_job_card_update_sb
+    get_job_card_update_sb,
+    update_invoice_job_card_sb
 )
 from ..models.job_card_model import job_card, JobCardWithMaterials, JobCardUpdate, JobCardCreate
 
@@ -69,3 +70,18 @@ async def get_job_card_with_materials(job_card_id: int):
 @router.get('/get_job_card_artisans/{job_card_id}')
 async def get_job_card_artisans(job_card_id: int):
     return get_job_card_artisans_sb(job_card_id)
+
+# @router.put('/update_invoice_job_card/{invoice_id}')
+# async def update_invoice_job_card(invoice_id: int, job_card_id: int):
+#     result = update_invoice_job_card_sb(invoice_id, job_card_id)
+#     if isinstance(result, Exception):
+#         raise HTTPException(
+#             status_code=500, 
+#             detail=f"Error updating invoice: {str(result)}"
+#         )
+#     if not result:
+#         raise HTTPException(
+#             status_code=404, 
+#             detail="Invoice not found or update failed"
+#         )
+#     return result

@@ -1,8 +1,10 @@
 from pydantic import BaseModel
+from typing import Optional
 
 
 class role(BaseModel):
-    role_name:str
+    role_name: str
+    description: Optional[str] = None
 
 class role_claim(BaseModel):
     permission:str

@@ -28,11 +28,10 @@ async def monthly_hours_worked_report(year: int = Query(..., description="Year t
     try:
         result = get_monthly_hours_worked(year)
         
-        # Handle database errors
         if isinstance(result, dict) and 'error' in result:
             return {"error": result['error']}
             
-        # Return sorted data by month number (should already be sorted but just in case)
+        #  sorted data by month number 
         return sorted(result, key=lambda x: x['month_number'])
         
     except Exception as error:
@@ -41,14 +40,13 @@ async def monthly_hours_worked_report(year: int = Query(..., description="Year t
 @router.post('/generate-clock-code')
 async def generate_clock_code(request: GenerateClockCodeRequest):
     try:
-        # Generate 6-digit code
+        # Generate
         code = random.randint(100000, 999999)
-        expires_at = datetime.utcnow() + timedelta(minutes=5)
+        expires_at = datetime.utcnow() + timedelta(minutes=request.expires_in)
         
-        # Insert code into database
         response = create_clock_code_sb(code, request.type, expires_at)
         
-        return {"code": code, "expires_at": expires_at.isoformat()}
+        return {"code": code, "expires_at": expires_at.isoformat(), "expires_in": request.expires_in}
     
     except Exception as error:
         raise HTTPException(
@@ -59,7 +57,6 @@ async def generate_clock_code(request: GenerateClockCodeRequest):
 @router.post('/verify-clock-code')
 async def verify_clock_code(request: VerifyClockCodeRequest):
     try:
-        # Verify code validity
         verification = verify_clock_code_sb(request.code, request.type)
         
         if not verification['valid']:
@@ -68,7 +65,7 @@ async def verify_clock_code(request: VerifyClockCodeRequest):
                 detail=verification['message']
             )
         
-        # Record time entry
+        #  time of entry
         current_time = datetime.utcnow().isoformat()
         if request.type == 'clock_in':
             response = clock_in_sb(request.employee_id, current_time)
@@ -88,10 +85,9 @@ async def verify_clock_code(request: VerifyClockCodeRequest):
 @router.post('/clock-in')
 async def clock_in(employee_id: int):
     try:
-        # Get current time
+        # Get time
         clock_in_time = datetime.now().isoformat()
         
-        # Insert into time log
         response = clock_in_sb(employee_id, clock_in_time)
         return {"status": "success", "clock_in_time": clock_in_time}
     
@@ -104,10 +100,9 @@ async def clock_in(employee_id: int):
 @router.post('/clock-out')
 async def clock_out(employee_id: int):
     try:
-        # Get current time
+        # Get  time
         clock_out_time = datetime.now().isoformat()
         
-        # Update latest time log
         response = clock_out_sb(employee_id, clock_out_time)
         return {"status": "success", "clock_out_time": clock_out_time}
     
@@ -120,10 +115,9 @@ async def clock_out(employee_id: int):
 @router.get('/employees/get-by-phone/{phone}')
 async def get_employee_by_phone(phone: str):
     try:
-        # Remove any formatting from the phone number
+        #  formatting 
         clean_phone = ''.join(filter(str.isdigit, phone))
         
-        # Get employee data
         employee = get_employee_by_phone_sb(clean_phone)
         
         if not employee:

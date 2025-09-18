@@ -1,4 +1,4 @@
-from ..Data.supabase import get_roles_sb,get_role_sb,create_role_sb,update_role_sb,get_role_claims_sb,get_role_claim_lines_sb,create_role_claim_line_sb,update_role_claim_line_sb
+from ..Data.supabase import get_roles_sb,get_role_sb,create_role_sb,update_role_sb,get_role_claims_sb,get_role_claim_lines_sb,create_role_claim_line_sb,update_role_claim_line_sb, delete_role_sb
 from fastapi import APIRouter
 from ..models.role_model import role, role_claim, role_claim_line
 
@@ -72,3 +72,11 @@ async def update_role_claim_line(role_claim_id:int,role_id:int,role_claim_line:r
         return response
     except Exception as error:
         return {"error": error } 
+    
+@router.delete('/delete_role/{role_id}')
+async def delete_role(role_id:int):
+    try:
+        response = delete_role_sb(role_id)
+        return response
+    except Exception as error:
+        return {"error": error}

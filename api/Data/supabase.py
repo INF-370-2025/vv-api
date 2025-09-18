@@ -137,6 +137,152 @@ def get_stock_type_sb(stock_type_id:int):
     except Exception as error:
         log_error(error)
         return error
+    
+# Stock Structure
+def get_stock_structure_sb():   
+    try:
+        db = get_supabase_client(True)
+        response = db.schema(settings.SUPA_SCHEMA) \
+        .table("stock_structure") \
+        .select("*") \
+        .execute() 
+        return response.data    
+    except Exception as error:
+        log_error(error)
+        return error
+# Stock Categories
+def create_stock_category_sb(category_name: str):
+    try:
+        db = get_supabase_client(True)
+        response = db.schema(settings.SUPA_SCHEMA) \
+            .table("stock_category") \
+            .insert({
+                "category_name": category_name
+            }) \
+            .execute()
+        return response.data
+    except Exception as error:
+        log_error(error)
+        return error
+
+def update_stock_category_sb(category_id: int, category_name: str):
+    try:
+        db = get_supabase_client(True)
+        response = db.schema(settings.SUPA_SCHEMA) \
+            .table("stock_category") \
+            .update({
+                "category_name": category_name
+            }) \
+            .eq("stock_category_id", category_id) \
+            .execute()
+        return response.data
+    except Exception as error:
+        log_error(error)
+        return error
+
+def delete_stock_category_sb(category_id: int):
+    try:
+        db = get_supabase_client(True)
+        response = db.schema(settings.SUPA_SCHEMA) \
+            .table("stock_category") \
+            .delete() \
+            .eq("stock_category_id", category_id) \
+            .execute()
+        return response.data
+    except Exception as error:
+        log_error(error)
+        return error
+
+# Stock Types
+def create_stock_type_sb(type_name: str, category_id: int):
+    try:
+        db = get_supabase_client(True)
+        response = db.schema(settings.SUPA_SCHEMA) \
+            .table("stock_type") \
+            .insert({
+                "type_name": type_name,
+                "stock_category_id": category_id
+            }) \
+            .execute()
+        return response.data
+    except Exception as error:
+        log_error(error)
+        return error
+
+def update_stock_type_sb(type_id: int, type_name: str, category_id: int):
+    try:
+        db = get_supabase_client(True)
+        response = db.schema(settings.SUPA_SCHEMA) \
+            .table("stock_type") \
+            .update({
+                "type_name": type_name,
+                "stock_category_id": category_id
+            }) \
+            .eq("stock_type_id", type_id) \
+            .execute()
+        return response.data
+    except Exception as error:
+        log_error(error)
+        return error
+
+def delete_stock_type_sb(type_id: int):
+    try:
+        db = get_supabase_client(True)
+        response = db.schema(settings.SUPA_SCHEMA) \
+            .table("stock_type") \
+            .delete() \
+            .eq("stock_type_id", type_id) \
+            .execute()
+        return response.data
+    except Exception as error:
+        log_error(error)
+        return error
+
+# Stock Items (already have create/update, need delete)
+def delete_stock_sb(stock_id: int):
+    try:
+        db = get_supabase_client(True)
+        response = db.schema(settings.SUPA_SCHEMA) \
+            .table("stock") \
+            .delete() \
+            .eq("stock_id", stock_id) \
+            .execute()
+        return response.data
+    except Exception as error:
+        log_error(error)
+        return error
+
+# Move stock item to different type
+def move_stock_to_type_sb(stock_id: int, new_type_id: int):
+    try:
+        db = get_supabase_client(True)
+        response = db.schema(settings.SUPA_SCHEMA) \
+            .table("stock") \
+            .update({
+                "stock_type_id": new_type_id
+            }) \
+            .eq("stock_id", stock_id) \
+            .execute()
+        return response.data
+    except Exception as error:
+        log_error(error)
+        return error
+
+# Move stock type to different category
+def move_type_to_category_sb(type_id: int, new_category_id: int):
+    try:
+        db = get_supabase_client(True)
+        response = db.schema(settings.SUPA_SCHEMA) \
+            .table("stock_type") \
+            .update({
+                "stock_category_id": new_category_id
+            }) \
+            .eq("stock_type_id", type_id) \
+            .execute()
+        return response.data
+    except Exception as error:
+        log_error(error)
+        return error
 
 
 # Stock
@@ -265,31 +411,42 @@ def create_role_sb(role:role):
     try:
         db = get_supabase_client(True)
         response = db.schema(settings.SUPA_SCHEMA) \
-        .table("role") \
-        .insert({ 
-                "role_name": role.role_name
-                     
-                     
-                }) \
-        .execute() 
-        return response.data    
+            .table("role") \
+            .insert({
+                "role_name": role.role_name,
+                "description": role.description
+            }) \
+            .execute()
+        return response.data
+    except Exception as error:
+        log_error(error)
+        return error
+
+def update_role_sb(role_id:int, role:role):
+    try:
+        db = get_supabase_client(True)
+        response = db.schema(settings.SUPA_SCHEMA) \
+            .table("role") \
+            .update({
+                "role_name": role.role_name,
+                "description": role.description
+            }) \
+            .eq("role_id", role_id) \
+            .execute()
+        return response.data
     except Exception as error:
         log_error(error)
         return error
     
-def update_role_sb(role_id:int,role:role):
+def delete_role_sb(role_id:int):
     try:
         db = get_supabase_client(True)
         response = db.schema(settings.SUPA_SCHEMA) \
-        .table("role") \
-        .update({ 
-                "role_name": role.role_name
-                        
-                        
-                }) \
-        .eq("role_id", role_id) \
-        .execute() 
-        return response.data    
+            .table("role") \
+            .delete() \
+            .eq("role_id", role_id) \
+            .execute()
+        return response.data
     except Exception as error:
         log_error(error)
         return error
@@ -373,9 +530,9 @@ def get_quotations_sb():
     try:
         db = get_supabase_client(True)
         response = db.schema(settings.SUPA_SCHEMA) \
-        .table("quotations_with_detail") \
-        .select("*") \
-        .execute()  
+            .table("quotations_view") \
+            .select("*") \
+            .execute()        
         return response.data        
     except Exception as error:
         log_error(error)
@@ -385,7 +542,7 @@ def get_quotations_user_sb(user_id:int):
     try:
         db = get_supabase_client(True)
         response = db.schema(settings.SUPA_SCHEMA) \
-        .table("quotations_with_details") \
+        .table("quotations_view") \
         .select("*") \
         .eq("user_id",user_id) \
         .execute()  
@@ -398,7 +555,7 @@ def get_quotation_sb(quotation_id:int):
     try:
         db = get_supabase_client(True)
         response = db.schema(settings.SUPA_SCHEMA) \
-        .table("quotations_with_detail") \
+        .table("quotations_view") \
         .select("*") \
         .eq("quotation_id",quotation_id) \
         .execute()  
@@ -420,7 +577,7 @@ def create_quotation_sb(quotation:quotation):
         .table("quotations") \
         .insert({ 
                     "job_request_id": quotation.job_request_id,
-                    "deposit": quotation.deposit,
+                    # "deposit": quotation.deposit,
                     "total_cost": quotation.total_cost,
                     "quotation_status_id": 1,
                     "quotation_url": quotation.quotation_url,
@@ -526,7 +683,7 @@ def get_invoices_user_sb(user_id:int):
     try:
         db = get_supabase_client(True)
         response = db.schema(settings.SUPA_SCHEMA) \
-        .table("invoices_with_details_new") \
+        .table("invoices_with_details") \
         .select("*") \
         .eq("user_id",user_id) \
         .execute()  
@@ -582,17 +739,17 @@ def get_unpaid_invoices():
         log_error(error)
         return {"error": str(error)}
     
-def create_invoice_sb(invoice:invoice):
+def create_invoice_sb(invoice: invoice):
     try:
         db = get_supabase_client(True)
         response = db.schema(settings.SUPA_SCHEMA) \
         .table("invoices") \
         .insert({ 
-                "job_card_id": invoice.job_card_id,
                 "total": invoice.total,
                 "invoice_url": invoice.invoice_url,
-                "invoice_status_id": 2,
-                "invoice_number": invoice.invoice_number
+                "invoice_status_id": invoice.invoice_status_id,
+                "invoice_number": invoice.invoice_number,
+                "quote_id": invoice.quote_id 
                                 }) \
         .execute() 
         return response.data    
@@ -674,6 +831,26 @@ def get_job_card_sb(job_card_id: int):
     except Exception as error:
         log_error(error)
         return error
+
+def update_invoice_job_card_sb(invoice_id: int, job_card_id: int):
+    try:
+        db = get_supabase_client(True)
+        response = db.schema(settings.SUPA_SCHEMA) \
+            .table("invoices") \
+            .update({
+                "job_card_id": job_card_id
+            }) \
+            .eq("invoice_id", invoice_id) \
+            .execute()
+        
+        # Check if the update was successful
+        if response.data:
+            return response.data[0]  # Return the updated invoice
+        else:
+            return None
+    except Exception as error:
+        log_error(error)
+        return error
     
 def get_job_card_update_sb(job_card_id: int):
     try:
@@ -688,17 +865,17 @@ def get_job_card_update_sb(job_card_id: int):
         log_error(error)
         return error
 
-def create_job_card_sb(job_card: JobCardCreate):  # Changed model type
+def create_job_card_sb(job_card: JobCardCreate):
     try:
         db = get_supabase_client(True)
         
-        # Prepare the main job card data
+        # Prepare the main job card data with default status
         job_card_data = {
             "pattern_id": job_card.pattern_id,
-            "job_card_status_id": job_card.job_card_status_id,
+            "job_card_status_id": 5,  # Default to Pending status
             "quotation_id": job_card.quotation_id,
             "special_instructions": job_card.special_instructions,
-            "completed_at": job_card.completed_at
+            # completed_at is intentionally left null
         }
         
         # Create main job card
@@ -715,25 +892,21 @@ def create_job_card_sb(job_card: JobCardCreate):  # Changed model type
         
         # Insert materials into bridging table
         if job_card.materials:
-            for material_id in job_card.materials:
-                db.schema(settings.SUPA_SCHEMA) \
-                    .table("job_card_material") \
-                    .insert({
-                        "job_card_id": job_card_id,
-                        "material_id": material_id
-                    }) \
-                    .execute()
+            material_records = [{"job_card_id": job_card_id, "material_id": material_id} 
+                               for material_id in job_card.materials]
+            db.schema(settings.SUPA_SCHEMA) \
+                .table("job_card_material") \
+                .insert(material_records) \
+                .execute()
         
         # Insert artisans into bridging table
         if job_card.artisans:
-            for employee_id in job_card.artisans:
-                db.schema(settings.SUPA_SCHEMA) \
-                    .table("job_card_artisan") \
-                    .insert({
-                        "job_card_id": job_card_id,
-                        "employee_id": employee_id
-                    }) \
-                    .execute()
+            artisan_records = [{"job_card_id": job_card_id, "employee_id": employee_id} 
+                              for employee_id in job_card.artisans]
+            db.schema(settings.SUPA_SCHEMA) \
+                .table("job_card_artisan") \
+                .insert(artisan_records) \
+                .execute()
         
         return new_job_card
     except Exception as error:
@@ -923,6 +1096,25 @@ def get_job_card_artisans_sb(job_card_id: int):
         log_error(error)
         return error
 
+
+def update_invoice_job_card_sb(invoice_id, job_card_id):
+    try:
+        db = get_supabase_client(True)
+        
+        response = db.schema(settings.SUPA_SCHEMA) \
+            .table("invoices") \
+            .update({"job_card_id": job_card_id}) \
+            .eq("invoice_id", invoice_id) \
+            .execute()
+        
+        if not response.data:
+            return None
+            
+        return response.data[0]
+    except Exception as error:
+        log_error(error)
+        return error
+    
 # Job Card Status Functions
 def get_job_card_statuses_sb():
     try:
@@ -1238,7 +1430,7 @@ def create_clock_code_sb(code: int, type: str, expires_at: datetime):
             .insert({ 
                 "code": code,
                 "type": type,
-                "expires_at": expires_at.isoformat()
+                "expires_at": expires_at.isoformat() + "Z" 
             }) \
             .execute()
         
@@ -1250,7 +1442,7 @@ def create_clock_code_sb(code: int, type: str, expires_at: datetime):
 def verify_clock_code_sb(code: int, type: str):
     try:
         db = get_supabase_client(True)
-        current_time = datetime.utcnow().isoformat()
+        current_time = datetime.utcnow().isoformat() + "Z"
         
         # Check for valid code
         response = db.schema(settings.SUPA_SCHEMA) \
@@ -1293,7 +1485,6 @@ def clock_in_sb(employee_id: int, clock_in_time: str):
 def clock_out_sb(employee_id: int, clock_out_time: str):
     try:
         db = get_supabase_client(True)
-        # Find latest clock-in without clock-out
         response = db.schema(settings.SUPA_SCHEMA) \
             .table("employee_time_log") \
             .select("employee_time_log_id") \
@@ -1308,7 +1499,6 @@ def clock_out_sb(employee_id: int, clock_out_time: str):
         
         log_id = response.data[0]['employee_time_log_id']
         
-        # Update with clock-out time
         update_response = db.schema(settings.SUPA_SCHEMA) \
             .table("employee_time_log") \
             .update({"clock_out": clock_out_time}) \
@@ -1964,16 +2154,14 @@ def get_materials_export_sb():
         return error
     
 def import_materials_sb(materials: list):
-    """Insert new materials with conflict handling"""
     try:
         db = get_supabase_client(True)
         inserted_count = 0
         duplicate_count = 0
         
-        # Insert materials one by one with conflict handling
         for name in materials:
             try:
-                # Check if material already exists
+                # Check if  exists
                 exists = db.schema(settings.SUPA_SCHEMA).table("materials") \
                     .select("material_name") \
                     .eq("material_name", name) \
@@ -1983,7 +2171,6 @@ def import_materials_sb(materials: list):
                     duplicate_count += 1
                     continue
                 
-                # Insert new material
                 response = db.schema(settings.SUPA_SCHEMA).table("materials") \
                     .insert({"material_name": name}) \
                     .execute()
@@ -1994,7 +2181,6 @@ def import_materials_sb(materials: list):
                     duplicate_count += 1
                     
             except Exception as e:
-                # Log error but continue with other materials
                 log_error(f"Error inserting material '{name}': {str(e)}")
                 duplicate_count += 1
         
@@ -2012,7 +2198,7 @@ def get_delivery_notes_sb():
     try:
         db = get_supabase_client(True)
         response = db.schema(settings.SUPA_SCHEMA) \
-        .table("delivery_note") \
+        .table("delivery_notes_with_details") \
         .select("*") \
         .execute() 
         return response.data         

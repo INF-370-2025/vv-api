@@ -45,6 +45,3 @@ async def get_devlivery_notes_user(user_id:int):
     except Exception as error:
         return {"error": error } 
      
-    
-
-    
