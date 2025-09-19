@@ -9,11 +9,11 @@ from email.mime.multipart import MIMEMultipart
 
 
 from fastapi.responses import RedirectResponse
-from .config import settings
+from api.config import settings
 from fastapi.middleware.cors import CORSMiddleware
-from .controllers import roles, users, employees, receipt, job_cards,quotations, roles ,  customer, job_request, general , stock, invoices, pattern, material, delivery_notes, employee_time_logs
+from api.controllers import roles, users, employees, receipt, job_cards,quotations, roles ,  customer, job_request, general , stock, invoices, pattern, material, delivery_notes, employee_time_logs
 from dotenv import load_dotenv
-from .Data.supabase import set_users
+from api.Data.supabase import set_users
 
 
 
