@@ -28,3 +28,9 @@ For swaggerUI, goto: http://127.0.0.1:8000/docs
 
 <!-- pip install pandas xlsxwriter -->
 <!-- pip install pandas openpyxl python-docx -->
+
+<!-- pip install pytest pytest-asyncio httpx pytest-mock -->
+
+## 4 Unit Testing
+
+- run this command for employees : python -m pytest api/tests/test_employees.py -v
