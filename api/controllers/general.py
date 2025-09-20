@@ -1,4 +1,4 @@
-from ..Data.supabase import get_titles_sb,contact_us_sb,get_admin_stats_sb,get_artisan_stats_sb, get_faqs_sb
+from ..Data.supabase import get_titles_sb,contact_us_sb,get_admin_stats_sb,get_artisan_stats_sb, get_faqs_sb, get_job_completion_timeline_sb, get_pending_job_requests_sb, get_revenue_data_sb
 from ..models.general_model import contact_us
 from fastapi import APIRouter
 
@@ -45,9 +45,35 @@ async def get_faqs():
         return {"error": error }
         
     
+@router.get('/get_job_completion_timeline')
+async def get_job_completion_timeline():
+    try:
+        response = get_job_completion_timeline_sb()
+        # Check if we got an error response
+        if hasattr(response, 'code') and response.code == '42P01':
+            # Table doesn't exist, return empty data
+            return []
+        elif isinstance(response, Exception):
+            # Other error, return empty array
+            return []
+        else:
+            return response
+    except Exception as error:
+        return {"error": str(error)}
+ 
     
+@router.get('/get_pending_job_requests')
+async def get_pending_job_requests(filter: str = 'all'):
+    try:
+        response = get_pending_job_requests_sb(filter)
+        return response
+    except Exception as error:
+        return {"error": str(error)}
     
-    
-    
-    
-    
+@router.get('/get_revenue_data')
+async def get_revenue_data():
+    try:
+        response = get_revenue_data_sb()
+        return response
+    except Exception as error:
+        return {"error": str(error)}
