@@ -80,6 +80,61 @@ async def set_users():
 
 
 # General
+def get_revenue_data_sb():
+    try:
+        db = get_supabase_client(True)
+
+        # Call the SQL function we created
+        response = db.rpc("get_revenue_last_six_months").execute()
+
+        if hasattr(response, "data"):
+            return response.data  
+        return response
+
+    except Exception as error:
+        log_error(error)
+        return {"error": str(error)}
+
+def get_pending_job_requests_sb(filter_period: str):
+    try:
+        db = get_supabase_client(True)
+
+        query = db.schema(settings.SUPA_SCHEMA) \
+            .table("job_request") \
+            .select("*, customers:customer_id(*, user(*))") \
+            .eq("job_request_status_id", 1)  # Pending status
+
+        # Calculate cutoff datetime in Python
+        now = datetime.utcnow()
+        if filter_period == 'week':
+            cutoff = now - timedelta(weeks=1)
+            query = query.gte('created_at', cutoff.isoformat())
+        elif filter_period == 'month':
+            cutoff = now - timedelta(days=30)
+            query = query.gte('created_at', cutoff.isoformat())
+        elif filter_period == 'year':
+            cutoff = now - timedelta(days=365)
+            query = query.gte('created_at', cutoff.isoformat())
+
+        response = query.execute()
+        return response.data
+
+    except Exception as error:
+        log_error(error)
+        return error
+
+
+def get_job_completion_timeline_sb():
+    try:
+        db = get_supabase_client(True)
+        response = db.schema(settings.SUPA_SCHEMA) \
+            .table("job_completion_timeline") \
+            .select("*") \
+            .execute()
+        return response.data
+    except Exception as error:
+        log_error(error)
+        return error
 
 def get_titles_sb():
     try:
