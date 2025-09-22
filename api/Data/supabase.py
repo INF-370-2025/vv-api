@@ -2074,7 +2074,8 @@ def create_employee_warning_sb(employee_warning:employee_warning):
         .insert({ 
                 "reason": employee_warning.reason,
                 "employee_warning_type_id": employee_warning.employee_warning_type_id,
-                "employee_id": employee_warning.employee_id
+                "employee_id": employee_warning.employee_id,
+                "is_disputed": employee_warning.is_disputed
 
                      
                      
@@ -2092,8 +2093,9 @@ def update_employee_warning_sb(employee_warning_id:int,employee_warning:employee
         .table("employee_warning") \
         .update({ 
                 "reason": employee_warning.reason,
-                "consequences": employee_warning.consequences,
-                "employee_id": employee_warning.employee_id
+                "employee_warning_type_id": employee_warning.employee_warning_type_id,
+                "employee_id": employee_warning.employee_id,
+                "is_disputed": employee_warning.is_disputed
                         
                         
                 }) \
@@ -2104,7 +2106,18 @@ def update_employee_warning_sb(employee_warning_id:int,employee_warning:employee
         log_error(error)
         return error
     
-    
+def delete_employee_warning_sb(employee_warning_id: int):
+    try:
+        db = get_supabase_client(True)
+        response = db.schema(settings.SUPA_SCHEMA) \
+            .table("employee_warning") \
+            .delete() \
+            .eq("employee_warning_id", employee_warning_id) \
+            .execute()
+        return response.data
+    except Exception as error:
+        log_error(error)
+        return error
     
 # receipt
 

@@ -1,3 +1,6 @@
+from ..Data.supabase import get_types_sb,get_type_sb,create_type_sb,update_type_sb,get_employees_sb,get_employee_sb, \
+    create_employee_sb,update_employee_sb,get_pay_slips_sb,get_pay_slip_sb,create_pay_slip_sb,update_pay_slip_sb \
+    ,get_employee_warnings_sb,get_employee_warning_sb,create_employee_warning_sb,update_employee_warning_sb,delete_employee_warning_sb,get_time_logs_sb,clock_in_sb,clock_out_sb, get_artisans_sb
 from fastapi import APIRouter, HTTPException
 from pydantic import BaseModel
 from typing import Optional
@@ -204,7 +207,15 @@ async def update_employee_warning(employee_warning_id: int, employee_warning: em
     try:
         return update_employee_warning_sb(employee_warning_id, employee_warning)
     except Exception as error:
-        return {"error": error}
+        return {"error": error } 
+    
+@router.delete('/delete_employee_warning/{employee_warning_id}')
+async def delete_employee_warning(employee_warning_id:int):
+    try:
+        response = delete_employee_warning_sb(employee_warning_id)
+        return response
+    except Exception as error:
+        return {"error": error } 
 
 
 # -------------------------------
