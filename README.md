@@ -33,4 +33,10 @@ For swaggerUI, goto: http://127.0.0.1:8000/docs
 
 ## 4 Unit Testing
 
-- run this command for employees : python -m pytest api/tests/test_employees.py -v
+- run these command for testing : 
+python -m pytest api/tests/test_employees.py -v
+python -m pytest api/tests/test_customers.py -v
+python -m pytest api/tests/test_invoices.py -v
+python -m pytest api/tests/test_roles.py -v
+python -m pytest api/tests/test_users.py -v
+

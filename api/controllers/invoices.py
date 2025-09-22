@@ -1,4 +1,4 @@
-from ..Data.supabase import get_invoices_sb, get_invoices_user_sb, log_error, update_invoice_status_sb, update_invoice_sb, get_unpaid_invoices, create_invoice_sb, update_invoice_pop_sb, update_invoice_job_card_sb
+from ..Data.supabase import get_invoices_sb, get_invoices_user_sb, log_error, update_invoice_status_sb, update_invoice_sb, get_unpaid_invoices, create_invoice_sb, update_invoice_pop_sb, update_invoice_job_card_sb, get_invoice_by_quotation_sb, get_invoice_by_job_card_sb
 from fastapi import APIRouter
 from ..models.quotation_model import quotation
 from ..models.invoice_model import invoice
@@ -22,6 +22,22 @@ async def get_invoices_user(user_id:int):
         return response
     except Exception as error:
         return {"error": error } 
+    
+@router.get('/get_invoice_job_card/{job_card_id}')
+async def get_invoice_job_card(job_card_id: int):
+    try:
+        response = get_invoice_by_job_card_sb(job_card_id)
+        return response
+    except Exception as error:
+        return {"error": str(error)}
+
+@router.get('/get_invoice_by_quotation/{quotation_id}')
+async def get_invoice_by_quotation(quotation_id: int):
+    try:
+        response = get_invoice_by_quotation_sb(quotation_id)
+        return response
+    except Exception as error:
+        return {"error": str(error)}
 
 
 @router.put('/update_invoice/{invoice_id}')

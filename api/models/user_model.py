@@ -1,5 +1,5 @@
 from pydantic import BaseModel
-
+from typing import Optional
 
 class user(BaseModel):
     name:str
@@ -11,3 +11,10 @@ class user(BaseModel):
     image:str
     uuid:str
     is_employee:bool
+
+class UserUpdate(BaseModel):
+    email_address: Optional[str] = None
+    phone_number: Optional[str] = None
+    name: Optional[str] = None
+    surname: Optional[str] = None
+    image: Optional[str] = None

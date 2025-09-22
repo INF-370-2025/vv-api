@@ -3,7 +3,7 @@ from ..config import settings
 from ..models.role_model import role, role_claim, role_claim_line
 from ..models.quotation_model import quotation
 from ..models.job_card_model import JobCardCreate
-from ..models.user_model import user
+from ..models.user_model import user, UserUpdate
 from ..models.type_model import type
 from ..models.employee_model import employee
 from ..models.employee_pay_slip_model import employee_pay_slip
@@ -18,6 +18,10 @@ from ..models.pattern_model import pattern
 from ..models.delivery_note_model import delivery_note
 from ..models.employee_time_log_model import EmployeeTimeLog
 from datetime import datetime, timedelta
+from fastapi import UploadFile
+import uuid
+import os
+from fastapi import HTTPException
 
 print_logs = True
 
@@ -778,6 +782,32 @@ def get_invoices_user_sb(user_id:int):
         log_error(error)
         return error
 
+def get_invoice_by_quotation_sb(quotation_id: int):
+    try:
+        db = get_supabase_client(True)
+        response = db.schema(settings.SUPA_SCHEMA) \
+            .table("invoices") \
+            .select("*") \
+            .eq("quote_id", quotation_id) \
+            .execute()
+        return response.data
+    except Exception as error:
+        log_error(error)
+        return {"error": str(error)}
+
+def get_invoice_by_job_card_sb(job_card_id: int):
+    try:
+        db = get_supabase_client(True)
+        response = db.schema(settings.SUPA_SCHEMA) \
+                     .table("invoices") \
+                     .select("*") \
+                     .eq("job_card_id", job_card_id) \
+                     .execute()
+        return response.data
+    except Exception as error:
+        log_error(error)
+        return []
+
 def update_invoice_sb(invoice_id:int,invoice:invoice):
      try:
          db = get_supabase_client(True)
@@ -999,46 +1029,6 @@ def create_job_card_sb(job_card: JobCardCreate):
         log_error(error)
         return error
 
-# def update_job_card_sb(job_card_id: int, job_card: job_card):
-#     try:
-#         db = get_supabase_client(True)
-        
-#         # Extract only non-null values for update
-#         update_data = {}
-#         if job_card.pattern_id is not None:
-#             update_data["pattern_id"] = job_card.pattern_id
-#         if job_card.job_card_status_id is not None:
-#             update_data["job_card_status_id"] = job_card.job_card_status_id
-#         if job_card.quotation_id is not None:
-#             update_data["quotation_id"] = job_card.quotation_id
-#         if job_card.special_instructions is not None:
-#             update_data["special_instructions"] = job_card.special_instructions
-#         if job_card.completed_at is not None:
-#             update_data["completed_at"] = job_card.completed_at
-        
-#         # Only update if there are changes
-#         if update_data:
-#             update_response = db.schema(settings.SUPA_SCHEMA) \
-#                 .table("job_card") \
-#                 .update(update_data) \
-#                 .eq("job_card_id", job_card_id) \
-#                 .execute()
-#         else:
-#             return None
-        
-#         # Fetch updated record
-#         get_response = db.schema(settings.SUPA_SCHEMA) \
-#             .table("job_cards_with_details") \
-#             .select("*") \
-#             .eq("job_card_id", job_card_id) \
-#             .execute()
-        
-#         return get_response.data[0] if get_response.data else None
-        
-#     except Exception as error:
-#         log_error(f"Update job card error: {str(error)}")
-#         return {"error": str(error)}
-    
     
 def update_job_card_sb(job_card_id: int, update_data: dict):
     try:
@@ -1161,26 +1151,161 @@ def get_job_card_with_materials_sb(job_card_id: int):
 def get_job_card_artisans_sb(job_card_id: int):
     try:
         db = get_supabase_client(True)
-        response = db.schema(settings.SUPA_SCHEMA).from_("job_card_artisan") \
-            .select("""
-                employee:employee_id (
-                    employee_id,
-                    user:user_id (user_id, name, surname, email_address, phone_number, image),
-                    job_scope,
-                    address,
-                    emergency_contact,
-                    hourly_rate
-                )
-            """) \
-            .eq("job_card_id", job_card_id) \
+        resp = (
+            db.schema(settings.SUPA_SCHEMA)
+              .table("job_card_artisan")
+              .select("*")  # or select("employee_id, job_card_artisan_id, created_at") if you want
+              .eq("job_card_id", job_card_id)
+              .execute()
+        )
+        return resp.data or []
+    except Exception as e:
+        log_error(f"Error fetching job card artisans: {str(e)}")
+        return []
+
+    
+def get_job_cards_employee_sb(employee_id: int):
+    try:
+        db = get_supabase_client(True)
+
+        # Get job_card_artisan entries for this employee
+        artisan_entries = (
+            db.schema(settings.SUPA_SCHEMA)
+            .from_("job_card_artisan")
+            .select("job_card_id")
+            .eq("employee_id", employee_id)
             .execute()
-        
-        # Extract employee objects from response
-        artisans = [item["employee"] for item in response.data]
-        return artisans
+        )
+
+        job_card_ids = [item["job_card_id"] for item in artisan_entries.data] if artisan_entries.data else []
+
+        if not job_card_ids:
+            return []
+
+        # Fetch job cards by IDs
+        job_cards_response = (
+            db.schema(settings.SUPA_SCHEMA)
+            .from_("job_card")
+            .select("*")
+            .in_("job_card_id", job_card_ids)
+            .execute()
+        )
+
+        return job_cards_response.data if job_cards_response.data else []
+
     except Exception as error:
         log_error(error)
-        return error
+        return {"error": str(error)}
+    
+def get_job_card_artisans_sb(job_card_id: int):
+    """Return all artisans for a job card with full employee info"""
+    try:
+        db = get_supabase_client(True)
+        # join job_card_artisan (bridging table) with employee table
+        resp = (
+            db.schema(settings.SUPA_SCHEMA)
+              .table("job_card_artisan")
+              .select("employee_id, created_at, job_card_artisan_id, employee(name, role, image)")
+              .eq("job_card_id", job_card_id)
+              .execute()
+        )
+        if resp.data:
+            # flatten employee info
+            artisans = []
+            for row in resp.data:
+                artisan = row.get("employee", {})
+                artisan["employee_id"] = row.get("employee_id")
+                artisan["job_card_artisan_id"] = row.get("job_card_artisan_id")
+                artisans.append(artisan)
+            return artisans
+        return []
+    except Exception as e:
+        log_error(f"Error fetching job card artisans: {str(e)}")
+        return []
+
+
+    
+def upload_progress_image_sb(job_card_id: int, file_content: bytes, filename: str, content_type: str):
+    """
+    Supabase helper function for uploading progress images
+    Handles all database and storage operations
+    """
+    try:
+        db = get_supabase_client(True)
+
+        # 1. Get job card details
+        job_card_response = db.schema(settings.SUPA_SCHEMA) \
+            .table("job_card") \
+            .select("job_card_id, quotation_id") \
+            .eq("job_card_id", job_card_id) \
+            .execute()
+
+        if not job_card_response.data:
+            raise HTTPException(status_code=404, detail="Job card not found")
+
+        job_card = job_card_response.data[0]
+        quotation_id = job_card.get('quotation_id')
+        job_request_id = None
+
+        # 2. Get job_request_id if quotation exists
+        if quotation_id:
+            quotation_response = db.schema(settings.SUPA_SCHEMA) \
+                .table("quotations") \
+                .select("job_request_id") \
+                .eq("quotation_id", quotation_id) \
+                .execute()
+            if quotation_response.data:
+                job_request_id = quotation_response.data[0].get("job_request_id")
+
+        # 3. Validate file type
+        file_extension = os.path.splitext(filename)[1].lower()
+        allowed_extensions = ['.jpg', '.jpeg', '.png', '.gif', '.webp']
+        if file_extension not in allowed_extensions:
+            raise HTTPException(
+                status_code=400,
+                detail=f"File type not allowed. Allowed types: {', '.join(allowed_extensions)}"
+            )
+
+        # 4. Generate unique filename
+        unique_filename = f"progress_{job_card_id}_{uuid.uuid4()}{file_extension}"
+
+        # 5. Upload to Supabase Storage
+        storage_response = db.storage.from_("progress-images").upload(
+            unique_filename,
+            file_content,
+            content_type
+        )
+        if storage_response.get('error'):
+            raise Exception(f"Storage upload error: {storage_response['error']}")
+
+        # 6. Get public URL
+        public_url = db.storage.from_("progress-images").get_public_url(unique_filename)
+
+        # 7. Update job_request.progress_url only if job_request_id exists
+        if job_request_id:
+            update_response = db.schema(settings.SUPA_SCHEMA) \
+                .table("job_request") \
+                .update({
+                    "progress_url": public_url,
+                    "updated_at": "now()"
+                }) \
+                .eq("job_request_id", job_request_id) \
+                .execute()
+            if update_response.get('error'):
+                log_error(f"Database update error: {update_response['error']}")
+
+        return {
+            "progress_url": public_url,
+            "job_card_id": job_card_id,
+            "job_request_id": job_request_id,
+            "filename": unique_filename
+        }
+
+    except HTTPException:
+        raise
+    except Exception as error:
+        log_error(f"Supabase upload progress image error: {str(error)}")
+        raise HTTPException(status_code=500, detail=f"Failed to upload progress image: {str(error)}")
 
 
 def update_invoice_job_card_sb(invoice_id, job_card_id):
@@ -1306,26 +1431,27 @@ def create_user_sb(user:user):
         log_error(error)
         return error
     
-def update_user_sb(user_id:int,user:user):
+def update_user_sb(user_id: int, user: UserUpdate):
     try:
+        # Create update dictionary with only provided fields
+        update_data = {}
+        if user.email_address is not None:
+            update_data["email_address"] = user.email_address
+        if user.phone_number is not None:
+            update_data["phone_number"] = user.phone_number
+        if user.name is not None:
+            update_data["name"] = user.name
+        if user.surname is not None:
+            update_data["surname"] = user.surname
+        if user.image is not None:
+            update_data["image"] = user.image
+        
         db = get_supabase_client(True)
         response = db.schema(settings.SUPA_SCHEMA) \
-        .table("user") \
-        .update({ 
-                "name": user.name,
-                "surname": user.surname,
-                "email_address": user.email_address,
-                "phone_number": user.phone_number,
-                "role_id": user.role_id,
-                "title_id": user.title_id,
-                "image": user.image,
-                "uuid": user.uuid,
-                "is_employee": user.is_employee
-                        
-                        
-                }) \
-        .eq("user_id", user_id) \
-        .execute() 
+            .table("user") \
+            .update(update_data) \
+            .eq("user_id", user_id) \
+            .execute() 
         return response.data    
     except Exception as error:
         log_error(error)
@@ -1475,26 +1601,78 @@ def create_employee_sb(employee:employee):
         log_error(error)
         return error
     
-def update_employee_sb(employee_id:int,employee:employee):
+def get_employee_info_sb(employee_id: int):
+
     try:
         db = get_supabase_client(True)
         response = db.schema(settings.SUPA_SCHEMA) \
-        .table("employee") \
-        .update({ 
-                "job_scope": employee.job_scope,
-                "address": employee.address,
-                "user_id": employee.user_id,
-                "emergency_contact": employee.emergency_contact,
-                "hourly_rate": employee.hourly_rate
-                        
-                        
-                }) \
-        .eq("employee_id", employee_id) \
-        .execute() 
-        return response.data    
+            .table("employee") \
+            .select("*") \
+            .eq("employee_id", employee_id) \
+            .execute()
+        return response.data
     except Exception as error:
         log_error(error)
-        return error
+        return {"error": str(error)}
+    
+def get_employee_by_user_id_sb(user_id: int):
+
+    try:
+        db = get_supabase_client(True)
+        response = db.schema(settings.SUPA_SCHEMA) \
+            .table("employee") \
+            .select("*") \
+            .eq("user_id", user_id) \
+            .execute()
+        return response.data
+    except Exception as error:
+        log_error(error)
+        return {"error": str(error)}
+
+def get_user_by_phone_sb(phone: str):
+
+    try:
+        db = get_supabase_client(True)
+        response = db.schema(settings.SUPA_SCHEMA) \
+            .table("user") \
+            .select("*") \
+            .eq("phone_number", phone) \
+            .execute()
+        return response.data
+    except Exception as error:
+        log_error(error)
+        return {"error": str(error)}
+
+def update_employee_sb(employee_id: int, employee_data: dict):
+
+    try:
+        db = get_supabase_client(True)
+        response = db.schema(settings.SUPA_SCHEMA) \
+            .table("employee") \
+            .update({
+                "emergency_contact": employee_data.get("emergency_contact"),
+                "address": employee_data.get("address")
+            }) \
+            .eq("employee_id", employee_id) \
+            .execute()
+        return response.data
+    except Exception as error:
+        log_error(error)
+        return {"error": str(error)}
+    
+def get_user_sb(user_id: int):
+
+    try:
+        db = get_supabase_client(True)
+        response = db.schema(settings.SUPA_SCHEMA) \
+            .table("user") \
+            .select("*") \
+            .eq("user_id", user_id) \
+            .execute()
+        return response.data
+    except Exception as error:
+        log_error(error)
+        return {"error": str(error)}
     
 def get_time_logs_sb():
     try:
@@ -2363,51 +2541,122 @@ def get_faqs_sb():
         return error
 
 
+
 def get_admin_stats_sb():
     try:
         db = get_supabase_client(True)
-        
-        # Jobs Requests
-        response_job_requests = db.schema(settings.SUPA_SCHEMA).table("job_request").select("*").eq("job_request_status_id",1).execute() 
+
+        # --- Job Requests (status_id = 1 = new/pending) ---
+        response_job_requests = (
+            db.schema(settings.SUPA_SCHEMA)
+              .table("job_request")
+              .select("job_request_id")
+              .eq("job_request_status_id", 1)
+              .execute()
+        )
         new_requests = len(response_job_requests.data)
-        
-        
-        # Completed Job Cards
-        today = datetime.today()
-        start_of_week = today - timedelta(days=today.weekday())  # Monday
-        end_of_week = start_of_week + timedelta(days=7)          # next Monday (exclusive)
+
+        # --- Completed Job Cards This Week (status_id = 3 = completed) ---
+        today = datetime.utcnow()
+        start_of_week = today - timedelta(days=today.weekday())   # Monday
+        end_of_week = start_of_week + timedelta(days=7)           # next Monday
         start_str = start_of_week.strftime('%Y-%m-%d')
         end_str = end_of_week.strftime('%Y-%m-%d')
-        response_job_cards = db.schema(settings.SUPA_SCHEMA).table("job_card").select("*").eq("job_card_status_id", 3).gte("completed_at", start_str).lt("completed_at", end_str).execute()
+
+        response_job_cards = (
+            db.schema(settings.SUPA_SCHEMA)
+              .table("job_card")
+              .select("job_card_id, completed_at")
+              .eq("job_card_status_id", 3)
+              .gte("completed_at", start_str)
+              .lt("completed_at", end_str)
+              .execute()
+        )
         completed_job_cards_week = len(response_job_cards.data)
 
-        
-        # Customers
-        response_total_customers = db.schema(settings.SUPA_SCHEMA).table("customers").select("*").execute() 
+        # --- Total Customers ---
+        response_total_customers = (
+            db.schema(settings.SUPA_SCHEMA)
+              .table("customers")
+              .select("customer_id")
+              .execute()
+        )
         total_customers = len(response_total_customers.data)
-        
-        
-        # Employees
-        today = datetime.utcnow().date()
-        tomorrow = today + timedelta(days=1)
-        today_str = today.isoformat()         # '2025-05-23'
-        tomorrow_str = tomorrow.isoformat()   # '2025-05-24' 
-        response_employees= db.schema(settings.SUPA_SCHEMA).table("employee_time_log").select("*").gte("clock_in", today_str).lt("clock_in", tomorrow_str).execute()
+
+        # --- Employees Clocked In Today ---
+        today_date = datetime.utcnow().date()
+        tomorrow_date = today_date + timedelta(days=1)
+        today_str = today_date.isoformat()
+        tomorrow_str = tomorrow_date.isoformat()
+
+        response_employees = (
+            db.schema(settings.SUPA_SCHEMA)
+              .table("employee_time_log")
+              .select("employee_time_log_id")
+              .gte("clock_in", today_str)
+              .lt("clock_in", tomorrow_str)
+              .execute()
+        )
         employees_clocked_in_today = len(response_employees.data)
 
+        # --- Pending Quotations (status_id = 1 = pending) ---
+        response_pending_quotes = (
+            db.schema(settings.SUPA_SCHEMA)
+              .table("quotations")
+              .select("quotation_id")
+              .eq("quotation_status_id", 1)
+              .execute()
+        )
+        pending_quotations = len(response_pending_quotes.data)
 
+        # --- Unpaid Invoices (status_id = 2 = unpaid) ---
+        response_unpaid_invoices = (
+            db.schema(settings.SUPA_SCHEMA)
+              .table("invoices")
+              .select("invoice_id")
+              .eq("invoice_status_id", 2)
+              .execute()
+        )
+        unpaid_invoices = len(response_unpaid_invoices.data)
+
+        # --- Low Stock Items (stock_level < 10) ---
+        response_low_stock = (
+            db.schema(settings.SUPA_SCHEMA)
+              .table("stock")
+              .select("stock_id, stock_level")
+              .lt("stock_level", 10)
+              .execute()
+        )
+        low_stock_items = len(response_low_stock.data)
+        
+        response_pending_job_cards = (
+            db.schema(settings.SUPA_SCHEMA)
+              .table("job_card")
+              .select("job_card_id")
+              .eq("job_card_status_id", 5)
+              .execute()
+        )
+        pending_job_cards = len(response_pending_job_cards.data)
+
+        # --- Final Response ---
         resp = {
-            "new_requests":new_requests,
-            "completed_job_cards_week":completed_job_cards_week,
-            "total_customers":total_customers,
-            "employees_clocked_in_today":employees_clocked_in_today
+            "new_requests": new_requests,
+            "completed_job_cards_week": completed_job_cards_week,
+            "total_customers": total_customers,
+            "employees_clocked_in_today": employees_clocked_in_today,
+            "pending_quotations": pending_quotations,
+            "unpaid_invoices": unpaid_invoices,
+            "low_stock_items": low_stock_items,
+            "pending_job_cards": pending_job_cards
+
         }
-        
-        
-        return resp        
+
+        return resp
+
     except Exception as error:
         log_error(error)
-        return error
+        return {"error": str(error)}
+
 
        
 def get_artisan_stats_sb(user_id: int):
