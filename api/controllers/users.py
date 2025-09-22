@@ -1,6 +1,6 @@
 from ..Data.supabase import get_users_sb,get_user_sb,create_user_sb,update_user_sb,get_user_employee_sb,get_user_customer_sb
 from fastapi import APIRouter
-from ..models.user_model import user
+from ..models.user_model import user, UserUpdate
 
 router = APIRouter()
 
@@ -46,9 +46,9 @@ async def create_user(user:user):
         return {"error": error } 
     
 @router.put('/update_user/{user_id}')
-async def update_user(user_id:int,user:user):
+async def update_user(user_id: int, user: UserUpdate):  
     try:
-        response = update_user_sb(user_id,user)
+        response = update_user_sb(user_id, user)
         return response
     except Exception as error:
-        return {"error": error } 
+        return {"error": error }
