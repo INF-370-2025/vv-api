@@ -1147,21 +1147,104 @@ def get_job_card_with_materials_sb(job_card_id: int):
     except Exception as error:
         log_error(error)
         return error
-    
-def get_job_card_artisans_sb(job_card_id: int):
+ 
+def get_job_cards_employee_with_details_sb(employee_id: int):
+    """Get job cards for employee with full details"""
     try:
         db = get_supabase_client(True)
-        resp = (
+
+        # First, get all job_card_ids where this employee is assigned
+        artisan_response = (
             db.schema(settings.SUPA_SCHEMA)
-              .table("job_card_artisan")
-              .select("*")  # or select("employee_id, job_card_artisan_id, created_at") if you want
-              .eq("job_card_id", job_card_id)
-              .execute()
+            .from_("job_card_artisan")
+            .select("job_card_id")
+            .eq("employee_id", employee_id)
+            .execute()
         )
-        return resp.data or []
-    except Exception as e:
-        log_error(f"Error fetching job card artisans: {str(e)}")
-        return []
+
+        if not artisan_response.data:
+            return []
+
+        job_card_ids = [item["job_card_id"] for item in artisan_response.data]
+
+        # Now get the full job card details for these IDs
+        job_cards_response = (
+            db.schema(settings.SUPA_SCHEMA)
+            .from_("job_card")
+            .select("*")
+            .in_("job_card_id", job_card_ids)
+            .execute()
+        )
+
+        if not job_cards_response.data:
+            return []
+
+        job_cards = []
+        
+        for job_card in job_cards_response.data:
+            job_card_id = job_card["job_card_id"]
+            
+            # Get quotation details
+            quotation_data = None
+            if job_card.get("quotation_id"):
+                quotation_response = (
+                    db.schema(settings.SUPA_SCHEMA)
+                    .from_("quotations")
+                    .select("*")
+                    .eq("quotation_id", job_card["quotation_id"])
+                    .execute()
+                )
+                quotation_data = quotation_response.data[0] if quotation_response.data else None
+                
+                # Get job request details if quotation exists
+                job_request_data = None
+                if quotation_data and quotation_data.get("job_request_id"):
+                    job_request_response = (
+                        db.schema(settings.SUPA_SCHEMA)
+                        .from_("job_request")
+                        .select("*")
+                        .eq("job_request_id", quotation_data["job_request_id"])
+                        .execute()
+                    )
+                    job_request_data = job_request_response.data[0] if job_request_response.data else None
+                    
+                    # Add job request to quotation
+                    if quotation_data:
+                        quotation_data["job_request"] = job_request_data
+            
+            # Get materials for this job card
+            materials_response = (
+                db.schema(settings.SUPA_SCHEMA)
+                .from_("job_card_material")
+                .select("*, materials:material_id(*)")
+                .eq("job_card_id", job_card_id)
+                .execute()
+            )
+            
+            # Get artisans for this job card
+            artisans_response = (
+                db.schema(settings.SUPA_SCHEMA)
+                .from_("job_card_artisan")
+                .select("*, employees:employee_id(*, users:user_id(*))")
+                .eq("job_card_id", job_card_id)
+                .execute()
+            )
+            
+            # Build the complete job card object
+            complete_job_card = {
+                **job_card,
+                "quotations": quotation_data,
+                "job_card_materials": materials_response.data if materials_response.data else [],
+                "job_card_artisans": artisans_response.data if artisans_response.data else []
+            }
+            
+            job_cards.append(complete_job_card)
+
+        return job_cards
+
+    except Exception as error:
+        log_error(f"Error in get_job_cards_employee_with_details_sb: {str(error)}")
+        return {"error": str(error)}   
 
     
 def get_job_cards_employee_sb(employee_id: int):
@@ -1224,11 +1307,11 @@ def get_job_card_artisans_sb(job_card_id: int):
         return []
 
 
-    
-def upload_progress_image_sb(job_card_id: int, file_content: bytes, filename: str, content_type: str):
+def upload_progress_image_sb(job_card_id: int, file_content: bytes, filename: str, content_type: str = None):
     """
     Supabase helper function for uploading progress images
     Handles all database and storage operations
+    Replaces existing progress_url if one exists
     """
     try:
         db = get_supabase_client(True)
@@ -1245,17 +1328,24 @@ def upload_progress_image_sb(job_card_id: int, file_content: bytes, filename: st
 
         job_card = job_card_response.data[0]
         quotation_id = job_card.get('quotation_id')
-        job_request_id = None
+        
+        if not quotation_id:
+            raise HTTPException(status_code=404, detail="No quotation found for this job card")
 
-        # 2. Get job_request_id if quotation exists
-        if quotation_id:
-            quotation_response = db.schema(settings.SUPA_SCHEMA) \
-                .table("quotations") \
-                .select("job_request_id") \
-                .eq("quotation_id", quotation_id) \
-                .execute()
-            if quotation_response.data:
-                job_request_id = quotation_response.data[0].get("job_request_id")
+        # 2. Get job_request_id from quotation
+        quotation_response = db.schema(settings.SUPA_SCHEMA) \
+            .table("quotations") \
+            .select("job_request_id") \
+            .eq("quotation_id", quotation_id) \
+            .execute()
+            
+        if not quotation_response.data:
+            raise HTTPException(status_code=404, detail="Quotation not found")
+            
+        job_request_id = quotation_response.data[0].get("job_request_id")
+        
+        if not job_request_id:
+            raise HTTPException(status_code=404, detail="Job request not found for this quotation")
 
         # 3. Validate file type
         file_extension = os.path.splitext(filename)[1].lower()
@@ -1269,36 +1359,53 @@ def upload_progress_image_sb(job_card_id: int, file_content: bytes, filename: st
         # 4. Generate unique filename
         unique_filename = f"progress_{job_card_id}_{uuid.uuid4()}{file_extension}"
 
-        # 5. Upload to Supabase Storage
-        storage_response = db.storage.from_("progress-images").upload(
-            unique_filename,
-            file_content,
-            content_type
-        )
-        if storage_response.get('error'):
-            raise Exception(f"Storage upload error: {storage_response['error']}")
+        # 5. Upload to Supabase Storage with proper error handling
+        try:
+            storage_response = db.storage.from_("progress-images").upload(
+                unique_filename,
+                file_content,
+                {"content-type": content_type or "image/jpeg"}
+            )
+            
+            # Check if upload was successful
+            if hasattr(storage_response, 'error') and storage_response.error:
+                raise Exception(f"Storage upload error: {storage_response.error}")
+                
+        except Exception as storage_error:
+            raise Exception(f"Failed to upload to storage: {str(storage_error)}")
 
         # 6. Get public URL
         public_url = db.storage.from_("progress-images").get_public_url(unique_filename)
 
-        # 7. Update job_request.progress_url only if job_request_id exists
-        if job_request_id:
+        # 7. Update job_request.progress_url (REMOVED updated_at field)
+        try:
             update_response = db.schema(settings.SUPA_SCHEMA) \
                 .table("job_request") \
                 .update({
-                    "progress_url": public_url,
-                    "updated_at": "now()"
+                    "progress_url": public_url
+                    # Removed: "updated_at": "now()" - this column might not exist
                 }) \
                 .eq("job_request_id", job_request_id) \
                 .execute()
-            if update_response.get('error'):
-                log_error(f"Database update error: {update_response['error']}")
+
+            # Check for database update errors
+            if hasattr(update_response, 'error') and update_response.error:
+                raise Exception(f"Database update error: {update_response.error}")
+                
+        except Exception as db_error:
+            # Try to delete the uploaded file if database update fails
+            try:
+                db.storage.from_("progress-images").remove([unique_filename])
+            except:
+                pass  # Ignore errors during cleanup
+            raise Exception(f"Failed to update database: {str(db_error)}")
 
         return {
             "progress_url": public_url,
             "job_card_id": job_card_id,
             "job_request_id": job_request_id,
-            "filename": unique_filename
+            "filename": unique_filename,
+            "message": "Progress image uploaded successfully"
         }
 
     except HTTPException:
@@ -1306,8 +1413,7 @@ def upload_progress_image_sb(job_card_id: int, file_content: bytes, filename: st
     except Exception as error:
         log_error(f"Supabase upload progress image error: {str(error)}")
         raise HTTPException(status_code=500, detail=f"Failed to upload progress image: {str(error)}")
-
-
+    
 def update_invoice_job_card_sb(invoice_id, job_card_id):
     try:
         db = get_supabase_client(True)
