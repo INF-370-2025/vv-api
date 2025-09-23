@@ -22,6 +22,8 @@ from fastapi import UploadFile
 import uuid
 import os
 from fastapi import HTTPException
+from datetime import datetime, timedelta
+
 
 print_logs = True
 
@@ -1550,7 +1552,8 @@ def update_user_sb(user_id: int, user: UserUpdate):
         if user.surname is not None:
             update_data["surname"] = user.surname
         if user.image is not None:
-            update_data["image"] = user.image
+            # Handle image deletion when empty string or null is passed
+            update_data["image"] = user.image if user.image != "" else None
         
         db = get_supabase_client(True)
         response = db.schema(settings.SUPA_SCHEMA) \
@@ -1562,6 +1565,7 @@ def update_user_sb(user_id: int, user: UserUpdate):
     except Exception as error:
         log_error(error)
         return error
+    
     
      
 # Employee_Type
@@ -2675,21 +2679,20 @@ def get_admin_stats_sb():
         )
         new_requests = len(response_job_requests.data)
 
-        # --- Completed Job Cards This Week (status_id = 3 = completed) ---
         today = datetime.utcnow()
-        start_of_week = today - timedelta(days=today.weekday())   # Monday
-        end_of_week = start_of_week + timedelta(days=7)           # next Monday
+        start_of_week = today - timedelta(days=today.weekday())
+        end_of_week = start_of_week + timedelta(days=7)
         start_str = start_of_week.strftime('%Y-%m-%d')
         end_str = end_of_week.strftime('%Y-%m-%d')
 
         response_job_cards = (
             db.schema(settings.SUPA_SCHEMA)
-              .table("job_card")
-              .select("job_card_id, completed_at")
-              .eq("job_card_status_id", 3)
-              .gte("completed_at", start_str)
-              .lt("completed_at", end_str)
-              .execute()
+            .table("job_card")
+            .select("job_card_id, completed_at")
+            .eq("job_card_status_id", 2)  
+            .gte("completed_at", start_str)
+            .lt("completed_at", end_str)
+            .execute()
         )
         completed_job_cards_week = len(response_job_cards.data)
 
