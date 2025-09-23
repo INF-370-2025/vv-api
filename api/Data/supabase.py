@@ -1552,7 +1552,8 @@ def update_user_sb(user_id: int, user: UserUpdate):
         if user.surname is not None:
             update_data["surname"] = user.surname
         if user.image is not None:
-            update_data["image"] = user.image
+            # Handle image deletion when empty string or null is passed
+            update_data["image"] = user.image if user.image != "" else None
         
         db = get_supabase_client(True)
         response = db.schema(settings.SUPA_SCHEMA) \
@@ -1564,6 +1565,7 @@ def update_user_sb(user_id: int, user: UserUpdate):
     except Exception as error:
         log_error(error)
         return error
+    
     
      
 # Employee_Type
