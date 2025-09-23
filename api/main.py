@@ -105,8 +105,8 @@ class EmailSchema(BaseModel):
 
 @app.post("/send-email")
 async def send_email(email_data:EmailSchema):
-    sender_email = "krishna.moodleyyy@gmail.com"
-    sender_password = "bimv hgav lbyx uaas"
+    sender_email = "vaultvisioninf370@gmail.com"
+    sender_password = "kzmx goti shwt xqcw"
     to_email = email_data.to_email
     subject = email_data.subject
     body = email_data.body
